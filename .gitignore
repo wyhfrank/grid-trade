@@ -2,3 +2,5 @@
 cache/
 env/
 config.yml
+__pycache__/
+nohup.out

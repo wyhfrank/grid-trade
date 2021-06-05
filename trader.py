@@ -55,7 +55,7 @@ class Trader(object):
             time.sleep(0.1)
         self.JPY, self.crypto_amount, self.now = JPY, crypto_amount, price_now
         self.init_cost = normalizeFloat(self.JPY + self.crypto_amount * price_now)
-        print(f"inital cost: {self.init_cost}")
+        print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
 
     def trade(self, price):
         if self.lock is True:

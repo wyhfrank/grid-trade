@@ -6,7 +6,7 @@ from requester import Requester
 with open('config.yml', 'r') as f:
     s = yaml.safe_load(f)
 service = s['service']
-requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mock=True)
+requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mock=service['mock'])
 webhook = s['discord']
 trader = Trader(s['trade']['crypto-name'], requester, webhook['info'], webhook['error'])
 trader.init(s['trade']['grid-number'], s['trade']['interval'])
@@ -22,8 +22,6 @@ def connect():
 def message(data, trader=trader):
     price = float(data['message']['data']['last'])
     trader.trade(price)
-    trader.status()
-    print(f"sell: {trader.sell_stack[-1][1]}, {price}, buy: {trader.buy_stack[-1][1]}")
 
 @sio.event
 def my_background_task(arg):

@@ -47,7 +47,10 @@ class Requester(object):
             print(res.content)
             return 99999999
         else:
-            data = res.json()['data']['order_id']
+            try:
+                data = res.json()['data']['order_id']
+            except:
+                data = 99999999
             return data
 
     def save_order(self, order_id):
