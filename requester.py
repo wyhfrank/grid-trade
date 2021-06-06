@@ -32,7 +32,6 @@ class Requester(object):
     def make_order(self, amount, price, action):
         print(f"make order action: {action} {amount} on {price}")
         if self.mode == "local":
-            print(f"make order: {action} {amount}@ {price}")
             return
         elif self.mode == "mock":
             path = "api/mock/trade"
@@ -62,7 +61,6 @@ class Requester(object):
     def save_order(self, order_id):
         print(f"save order {order_id}")
         if self.mode == "local":
-            print(f"save order {order_id}")
             return
         elif self.mode == "mock":
             path = "api/mock/order"
@@ -96,7 +94,6 @@ class Requester(object):
     def cancel_order(self, order_id):
         print(f"cancel_order: {order_id}")
         if self.mode == "local":
-            print(f"cancel order: {order_id}")
             return
         elif self.mode != "prod" and self.mode != "mock":
             return
@@ -108,6 +105,7 @@ class Requester(object):
         }
         res = self.post(path, body)
         if res.status_code != 200:
+            print(res.content)
             print(f"Fail to cancel order {order_id}") 
 
 

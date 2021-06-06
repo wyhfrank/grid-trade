@@ -85,14 +85,12 @@ class Trader(object):
                 # if not reach cell
                 if self.sell_stack[0][1] + self.interval <= self.cell:
                     # cancel the lowest buy order 
-                    cancel_buy_order = self.buy_stack[0][2]
-                    self.requester.cancel_order(cancel_buy_order)
-                    self.buy_stack.pop(0)
+                    elem = self.buy_stack.pop(0)
+                    self.requester.cancel_order(elem[2])
                     # add highest sell order
                     sell_price = self.sell_stack[0][1] + self.interval
                     sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
                     self.sell_stack.insert(0, ("sell", sell_price, sell_order_id))
-
                 self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {elem[1]}")
             if self.sell_stack:
                 self.get_income(self.init_cost, price)
@@ -110,9 +108,8 @@ class Trader(object):
                 self.now = elem[1]
                 if self.buy_stack[0][1] - self.interval >= self.ground:
                     # cancel the highest buy order 
-                    cancel_sell_order = self.sell_stack[0][2]
-                    self.requester.cancel_order(cancel_sell_order)
-                    self.sell_stack.pop(0)
+                    elem = self.sell_stack.pop(0)
+                    self.requester.cancel_order(elem[2])
                     # add highest sell order
                     buy_price = self.buy_stack[0][1] - self.interval
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
@@ -167,5 +164,3 @@ if __name__ == '__main__':
     crypto, JPY = trader.cal_cost(crypto_amount, JPY, price_now, trade['grid-number'], trade['interval'])
     unit = normalizeFloat(crypto / trade['grid-number'] * 2)
     print(f"Total cost: {JPY + crypto * price_now}, with JPY: {JPY} & {trader.crypto_name}: {crypto} per uint: {unit}")
-    # trader.init(s['trade']['grid-number'], s['trade']['interval'])
-    # trader.status()
