@@ -36,8 +36,8 @@ def my_background_task(arg):
 
 @sio.event
 def disconnect(trader=trader):
-    pass
-    # trader.send_msg("error", " price ticker has been disconnected")
+    trader.send_msg("error", " price ticker has been disconnected")
+    trader.cancel_all()
 
 
 sio.connect('wss://stream.bitbank.cc', transports=['websocket'])

@@ -146,6 +146,12 @@ class Trader(object):
             'Content-Type': 'application/json',
         }
         requests.request("POST", url, headers=headers, data=payload) 
+    
+    def cancel_all(self):
+        for sell_order in self.sell_stack:
+            self.requester.cancel_order(sell_order[2])
+        for buy_order in self.buy_stack:
+            self.requester.cancel_order(buy_order[2])
 
 
 def normalizeFloat(data):
