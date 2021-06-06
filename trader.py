@@ -22,8 +22,6 @@ class Trader(object):
         self.crypto_amount = 0
         self.JPY = 0
         self.init_cost = 0
-        self.sell_pointer = 0
-        self.buy_pointer = 0
         self.cell = 0
         self.ground = 0
         self.interval = 0
@@ -56,7 +54,7 @@ class Trader(object):
         self.unit = normalizeFloat(crypto_amount / grid_number * 2)
         half_grid_number = grid_number // 2
         for i in range(1, half_grid_number + 1):
-            if i <= 15:
+            if i <= 10:
                 buy_order_id = self.requester.make_order(self.unit, price_now - i * interval, "buy")
                 sell_order_id = self.requester.make_order(self.unit, price_now + i * interval, "sell")
                 self.buy_stack.insert(0, ("buy", price_now - i * interval, buy_order_id))
@@ -66,8 +64,6 @@ class Trader(object):
         self.init_cost = normalizeFloat(self.JPY + self.crypto_amount * price_now)
         self.ground = price_now - interval * half_grid_number
         self.cell = price_now + interval * half_grid_number
-        if len(self.sell_stack) > 15:
-            self.sell_pointer = self.buy_pointer = grid_number // 2 - 15 - 2
         print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
         self.lock = False
 
