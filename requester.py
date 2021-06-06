@@ -98,7 +98,7 @@ class Requester(object):
         if self.mode == "local":
             print(f"cancel order: {order_id}")
             return
-        elif self.mode != "prod" or self.mode != "mock":
+        elif self.mode != "prod" and self.mode != "mock":
             return
         path = "api/admin/cancel"
         body = {

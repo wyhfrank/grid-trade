@@ -9,15 +9,14 @@ service = s['service']
 requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mode=service['mode'])
 webhook = s['discord']
 trader = Trader(s['trade']['crypto-name'], requester, webhook['info'], webhook['error'])
-# trader.init(s['trade']['grid-number'], s['trade']['interval'])
+trader.init(s['trade']['grid-number'], s['trade']['interval'])
 sio = socketio.Client()
 
 
 @sio.event
 def connect(trader=trader):
     print('connect')
-    trader.init(s['trade']['grid-number'], s['trade']['interval'])
-    sio.emit('join-room', 'ticker_eth_jpy')
+    # trader.init(s['trade']['grid-number'], s['trade']['interval'])
 
 
 @sio.event
@@ -34,6 +33,7 @@ def message(data, trader=trader):
 @sio.event
 def my_background_task(arg):
     while True:
+        sio.emit('join-room', 'ticker_eth_jpy')
         sio.sleep(1)
 
 
