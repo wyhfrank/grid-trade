@@ -30,7 +30,7 @@ class Requester(object):
         return requests.post(url, headers=headers, data=data)
 
     def make_order(self, amount, price, action):
-        print(f"make order {action} {amount} on {price}")
+        print(f"make order action: {action} {amount} on {price}")
         if self.mode == "local":
             print(f"make order: {action} {amount}@ {price}")
             return
