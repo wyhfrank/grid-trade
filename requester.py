@@ -108,7 +108,7 @@ class Requester(object):
         }
         res = self.post(path, body)
         if res.status_code != 200:
-            print("Fail to cancel order") 
+            print(f"Fail to cancel order {order_id}") 
 
 
 

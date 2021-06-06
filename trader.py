@@ -49,6 +49,7 @@ class Trader(object):
         Build grid according to price of crypto currency now
         Set grid number & interval you want
         """
+        self.lock = True
         crypto_amount, JPY = self.requester.get_wallets(1)
         price_now = self.get_price()
         crypto_amount, JPY = self.cal_cost(crypto_amount, JPY, price_now, grid_number, interval)
@@ -68,6 +69,7 @@ class Trader(object):
         if len(self.sell_stack) > 15:
             self.sell_pointer = self.buy_pointer = grid_number // 2 - 15 - 2
         print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
+        self.lock = False
 
     def trade(self, price):
         if self.lock is True:
@@ -76,7 +78,6 @@ class Trader(object):
         if self.sell_stack and self.sell_stack[-1][1] < price:
             # add buy order when sell an order
             while self.sell_stack and self.sell_stack[-1][1] < price:
-                print("sell")
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.crypto_amount - self.unit)
                 elem = self.sell_stack.pop()
@@ -88,8 +89,8 @@ class Trader(object):
                 # if not reach cell
                 if self.sell_stack[0][1] + self.interval <= self.cell:
                     # cancel the lowest buy order 
-                    cancel_order_id = self.buy_stack[0][2]
-                    self.requester.cancel_order(cancel_order_id)
+                    cancel_buy_order = self.buy_stack[0][2]
+                    self.requester.cancel_order(cancel_buy_order)
                     self.buy_stack.pop(0)
                     # add highest sell order
                     sell_price = self.sell_stack[0][1] + self.interval
@@ -103,7 +104,6 @@ class Trader(object):
         # buy when price get low
         if self.buy_stack and self.buy_stack[-1][1] > price:
             while self.buy_stack and self.buy_stack[-1][1] > price:
-                print("buy")
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
                 elem = self.buy_stack.pop()
@@ -114,8 +114,8 @@ class Trader(object):
                 self.now = elem[1]
                 if self.buy_stack[0][1] - self.interval >= self.ground:
                     # cancel the highest buy order 
-                    cancel_order_id = self.sell_stack[0][2]
-                    self.requester.cancel_order(cancel_order_id)
+                    cancel_sell_order = self.sell_stack[0][2]
+                    self.requester.cancel_order(cancel_sell_order)
                     self.sell_stack.pop(0)
                     # add highest sell order
                     buy_price = self.buy_stack[0][1] - self.interval
