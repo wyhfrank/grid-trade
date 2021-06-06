@@ -4,12 +4,12 @@ import yaml
 
 
 class Requester(object):
-    def __init__(self, host, token, uid, crypto_name, mock=True):
+    def __init__(self, host, token, uid, crypto_name, mode="local"):
         self.host = host
         self.token = token
         self.uid = uid
         self.crypto_name = crypto_name
-        self.mock = mock
+        self.mode = mode
 
     def get_headers(self):
         headers = {
@@ -30,10 +30,15 @@ class Requester(object):
         return requests.post(url, headers=headers, data=data)
 
     def make_order(self, amount, price, action):
-        if self.mock:
+        if self.mode == "local":
+            print(f"make order: {action} {amount}@ {price}")
+            return
+        elif self.mode == "mock":
             path = "api/mock/trade"
-        else:
+        elif self.mode == "prod":
             path = "api/admin/trade"
+        else:
+            raise ValueError("Wrong no mode")
         body = {
             "crypto_name": self.crypto_name,
             "uid": self.uid,
@@ -54,10 +59,15 @@ class Requester(object):
             return data
 
     def save_order(self, order_id):
-        if self.mock:
+        if self.mode == "local":
+            print(f"save order {order_id}")
+            return
+        elif self.mode == "mock":
             path = "api/mock/order"
-        else:
+        elif self.mode == "prod":
             path = "api/admin/order"
+        else:
+            raise ValueError("Wrong no mode")
         body = {
             "uid": self.uid,
             "order_id": order_id,
@@ -80,6 +90,22 @@ class Requester(object):
         else:
             data = res.json()['data'][0]
             return data['amount'], data['JPY']
+    
+    def cancel_order(self, order_id):
+        if self.mode == "local":
+            print(f"cancel order: {order_id}")
+            return
+        elif self.mode != "prod" or self.mode != "mock":
+            return
+        path = "api/admin/cancel"
+        body = {
+            "uid": self.uid,
+            "crypto_name": self.crypto_name,
+            "order_id": order_id,
+        }
+        res = self.post(path, body)
+        if res.status_code != 200:
+            print("Fail to cancel order") 
 
 
 
@@ -88,5 +114,5 @@ if __name__ == '__main__':
         s = yaml.safe_load(f)
     
     service = s['service']
-    requeseter = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mock=False)
+    requeseter = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'])
     a, b = requeseter.get_wallets(1)

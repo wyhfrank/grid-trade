@@ -22,11 +22,17 @@ class Trader(object):
         self.crypto_amount = 0
         self.JPY = 0
         self.init_cost = 0
+        self.sell_pointer = 0
+        self.buy_pointer = 0
+        self.cell = 0
+        self.ground = 0
+        self.interval = 0
 
     def get_price(self):
         return float(self.PUB.get_ticker(f'{self.crypto_name}_jpy')['last'])
     
     def cal_cost(self, crypto_amount, JPY, price_now, grid_number, interval):
+        self.interval = interval
         if grid_number % 2 != 0:
             raise ValueError("Wrong format on grid number")
         half_grid_count = grid_number // 2
@@ -47,14 +53,20 @@ class Trader(object):
         price_now = self.get_price()
         crypto_amount, JPY = self.cal_cost(crypto_amount, JPY, price_now, grid_number, interval)
         self.unit = normalizeFloat(crypto_amount / grid_number * 2)
-        for i in range(1, grid_number // 2 + 1):
-            buy_order_id = self.requester.make_order(self.unit, price_now - i * interval, "buy")
-            self.buy_stack.insert(0, ("buy", price_now - i * interval, buy_order_id))
-            sell_order_id = self.requester.make_order(self.unit, price_now + i * interval, "sell")
-            self.sell_stack.insert(0, ("sell", price_now + i * interval, sell_order_id))
-            time.sleep(0.1)
+        half_grid_number = grid_number // 2
+        for i in range(1, half_grid_number + 1):
+            if i <= 15:
+                buy_order_id = self.requester.make_order(self.unit, price_now - i * interval, "buy")
+                sell_order_id = self.requester.make_order(self.unit, price_now + i * interval, "sell")
+                self.buy_stack.insert(0, ("buy", price_now - i * interval, buy_order_id))
+                self.sell_stack.insert(0, ("sell", price_now + i * interval, sell_order_id))
+                time.sleep(0.1)
         self.JPY, self.crypto_amount, self.now = JPY, crypto_amount, price_now
         self.init_cost = normalizeFloat(self.JPY + self.crypto_amount * price_now)
+        self.ground = price_now - interval * half_grid_number
+        self.cell = price_now + interval * half_grid_number
+        if len(self.sell_stack) > 15:
+            self.sell_pointer = self.buy_pointer = grid_number // 2 - 15 - 2
         print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
 
     def trade(self, price):
@@ -62,7 +74,9 @@ class Trader(object):
             return
         self.lock = True
         if self.sell_stack and self.sell_stack[-1][1] < price:
+            # add buy order when sell an order
             while self.sell_stack and self.sell_stack[-1][1] < price:
+                print("sell")
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.crypto_amount - self.unit)
                 elem = self.sell_stack.pop()
@@ -71,6 +85,17 @@ class Trader(object):
                 self.buy_stack.append(("buy", self.now, buy_order_id))
                 self.JPY = normalizeFloat(self.JPY + (elem[1] * self.unit * 1.0002))
                 self.now = elem[1]
+                # if not reach cell
+                if self.sell_stack[0][1] + self.interval <= self.cell:
+                    # cancel the lowest buy order 
+                    cancel_order_id = self.buy_stack[0][2]
+                    self.requester.cancel_order(cancel_order_id)
+                    self.buy_stack.pop(0)
+                    # add highest sell order
+                    sell_price = self.sell_stack[0][1] + self.interval
+                    sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
+                    self.sell_stack.insert(0, ("sell", sell_price, sell_order_id))
+
                 self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {elem[1]}")
             if self.sell_stack:
                 self.get_income(self.init_cost, price)
@@ -78,6 +103,7 @@ class Trader(object):
         # buy when price get low
         if self.buy_stack and self.buy_stack[-1][1] > price:
             while self.buy_stack and self.buy_stack[-1][1] > price:
+                print("buy")
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
                 elem = self.buy_stack.pop()
@@ -86,6 +112,15 @@ class Trader(object):
                 self.sell_stack.append(("sell", self.now, sell_order_id))
                 self.JPY = normalizeFloat(self.JPY - (elem[1] * self.unit * 0.9998))
                 self.now = elem[1]
+                if self.buy_stack[0][1] - self.interval >= self.ground:
+                    # cancel the highest buy order 
+                    cancel_order_id = self.sell_stack[0][2]
+                    self.requester.cancel_order(cancel_order_id)
+                    self.sell_stack.pop(0)
+                    # add highest sell order
+                    buy_price = self.buy_stack[0][1] - self.interval
+                    buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
+                    self.buy_stack.insert(0, ("buy", buy_price, sell_order_id))
                 self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {elem[1]}")
             if self.buy_stack:
                 self.get_income(self.init_cost, price)
@@ -122,7 +157,13 @@ if __name__ == '__main__':
         s = yaml.safe_load(f)
     
     service = s['service']
-    requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mock=True)
+    trade = s['trade']
+    requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'])
     trader = Trader(s['trade']['crypto-name'], requester, "", "")
-    trader.init(s['trade']['grid-number'], s['trade']['interval'])
+    crypto_amount, JPY = requester.get_wallets(1)
+    price_now = trader.get_price()
+    crypto, JPY = trader.cal_cost(crypto_amount, JPY, price_now, trade['grid-number'], trade['interval'])
+    unit = normalizeFloat(crypto / trade['grid-number'] * 2)
+    print(f"Total cost: {JPY + crypto * price_now}, with JPY: {JPY} & {trader.crypto_name}: {crypto} per uint: {unit}")
+    # trader.init(s['trade']['grid-number'], s['trade']['interval'])
     # trader.status()
