@@ -101,7 +101,7 @@ class Requester(object):
         body = {
             "uid": self.uid,
             "crypto_name": self.crypto_name,
-            "order_id": order_id,
+            "order_id": f"{order_id}",
         }
         res = self.post(path, body)
         if res.status_code != 200:
