@@ -113,7 +113,7 @@ class Trader(object):
                     # add highest sell order
                     buy_price = self.buy_stack[0][1] - self.interval
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
-                    self.buy_stack.insert(0, ("buy", buy_price, sell_order_id))
+                    self.buy_stack.insert(0, ("buy", buy_price, buy_order_id))
                 self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {elem[1]}")
             if self.buy_stack:
                 self.get_income(self.init_cost, price)
