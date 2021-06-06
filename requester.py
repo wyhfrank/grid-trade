@@ -30,6 +30,7 @@ class Requester(object):
         return requests.post(url, headers=headers, data=data)
 
     def make_order(self, amount, price, action):
+        print(f"make order {action} {amount} on {price}")
         if self.mode == "local":
             print(f"make order: {action} {amount}@ {price}")
             return
@@ -59,6 +60,7 @@ class Requester(object):
             return data
 
     def save_order(self, order_id):
+        print(f"save order {order_id}")
         if self.mode == "local":
             print(f"save order {order_id}")
             return
@@ -92,6 +94,7 @@ class Requester(object):
             return data['amount'], data['JPY']
     
     def cancel_order(self, order_id):
+        print(f"cancel_order: {order_id}")
         if self.mode == "local":
             print(f"cancel order: {order_id}")
             return
@@ -105,7 +108,7 @@ class Requester(object):
         }
         res = self.post(path, body)
         if res.status_code != 200:
-            print("Fail to cancel order") 
+            print(f"Fail to cancel order {order_id}") 
 
 
 
