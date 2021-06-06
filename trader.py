@@ -89,8 +89,8 @@ class Trader(object):
                 # if not reach cell
                 if self.sell_stack[0][1] + self.interval <= self.cell:
                     # cancel the lowest buy order 
-                    cancel_order_id = self.buy_stack[0][2]
-                    self.requester.cancel_order(cancel_order_id)
+                    cancel_buy_order = self.buy_stack[0][2]
+                    self.requester.cancel_order(cancel_buy_order)
                     self.buy_stack.pop(0)
                     # add highest sell order
                     sell_price = self.sell_stack[0][1] + self.interval
@@ -104,7 +104,6 @@ class Trader(object):
         # buy when price get low
         if self.buy_stack and self.buy_stack[-1][1] > price:
             while self.buy_stack and self.buy_stack[-1][1] > price:
-                print("buy")
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
                 elem = self.buy_stack.pop()
@@ -115,8 +114,8 @@ class Trader(object):
                 self.now = elem[1]
                 if self.buy_stack[0][1] - self.interval >= self.ground:
                     # cancel the highest buy order 
-                    cancel_order_id = self.sell_stack[0][2]
-                    self.requester.cancel_order(cancel_order_id)
+                    cancel_sell_order = self.sell_stack[0][2]
+                    self.requester.cancel_order(cancel_sell_order)
                     self.sell_stack.pop(0)
                     # add highest sell order
                     buy_price = self.buy_stack[0][1] - self.interval
