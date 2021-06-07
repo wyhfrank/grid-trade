@@ -27,12 +27,12 @@ async def async_main():
         except e:
             trader.send_msg("Error", "Grid trade fail to get price")
             continue
-        if len(trader.sell_stack) > 0 and len(trader.buy_stack) > 0:
-            print(f"sell: {trader.sell_stack[-1][1]}, now: {price}, buy: {trader.buy_stack[-1][1]}")
-            print(f"highest: {len(trader.sell_stack)}:{trader.sell_stack[0][1]}")
-            print(f"lowest: {len(trader.buy_stack)}:{trader.buy_stack[0][1]}")
-            print(trader.sell_stack)
-            print(trader.buy_stack)
+        # if len(trader.sell_stack) > 0 and len(trader.buy_stack) > 0:
+        #     print(f"sell: {trader.sell_stack[-1][1]}, now: {price}, buy: {trader.buy_stack[-1][1]}")
+        #     print(f"highest: {len(trader.sell_stack)}:{trader.sell_stack[0][1]}")
+        #     print(f"lowest: {len(trader.buy_stack)}:{trader.buy_stack[0][1]}")
+        #     print(trader.sell_stack)
+        #     print(trader.buy_stack)
         trader.trade(price)
 
 
