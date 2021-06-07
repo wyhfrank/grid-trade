@@ -92,7 +92,7 @@ class Trader(object):
                 buy_order_id = self.requester.make_order(self.unit, self.now, "buy")
                 self.buy_stack.append(("buy", self.now, buy_order_id))
                 # self.JPY = normalizeFloat(self.JPY + (save_elem[1] * self.unit * 1.0002))
-                self.total_profit = normalizeFloat(self.total_profit + self.profit + self.now * 0.0002 * * self.unit)
+                self.total_profit = normalizeFloat(self.total_profit + self.profit + self.now * 0.0002 * self.unit)
                 self.now = save_elem[1]
                 # if not reach cell
                 if self.sell_stack[0][1] + self.interval <= self.cell:
