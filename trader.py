@@ -4,10 +4,10 @@ import yaml
 import time
 import requests
 import json
-
+from checker import Checker
 
 class Trader(object):
-    def __init__(self, crypto_name, requester, d_info, d_err):
+    def __init__(self, crypto_name, requester, checker, d_info, d_err):
         self.crypto_name = crypto_name
         self.PUB = python_bitbankcc.public()
         self.infoWebhook = d_info
@@ -25,6 +25,7 @@ class Trader(object):
         self.cell = 0
         self.ground = 0
         self.interval = 0
+        self.checker = checker
 
     def get_price(self):
         return float(self.PUB.get_ticker(f'{self.crypto_name}_jpy')['last'])
@@ -71,9 +72,11 @@ class Trader(object):
         if self.lock is True:
             return
         self.lock = True
-        if self.sell_stack and self.sell_stack[-1][1] < price:
+        if self.sell_stack and self.sell_stack[-1][1] <= price:
             # add buy order when sell an order
-            while self.sell_stack and self.sell_stack[-1][1] < price:
+            while self.sell_stack and self.sell_stack[-1][1] <= price:
+                if self.sell_stack[-1][1] == price and not self.checker.check_order(f"{self.sell_stack[-1][2]}"):
+                    break
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.crypto_amount - self.unit)
                 elem = self.sell_stack.pop()
@@ -91,13 +94,15 @@ class Trader(object):
                     sell_price = self.sell_stack[0][1] + self.interval
                     sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
                     self.sell_stack.insert(0, ("sell", sell_price, sell_order_id))
-                self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {elem[1]}")
-            if self.sell_stack:
-                self.get_income(self.init_cost, price)
+                self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {self.now}")
+            # if self.sell_stack:
+            #     self.get_income(self.init_cost, price)
 
         # buy when price get low
-        if self.buy_stack and self.buy_stack[-1][1] > price:
-            while self.buy_stack and self.buy_stack[-1][1] > price:
+        if self.buy_stack and self.buy_stack[-1][1] >= price:
+            while self.buy_stack and self.buy_stack[-1][1] >= price:
+                if self.buy_stack[-1][1] == price and not self.checker.check_order(f"{self.buy_stack[-1][2]}"):
+                    break
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
                 elem = self.buy_stack.pop()
@@ -114,9 +119,9 @@ class Trader(object):
                     buy_price = self.buy_stack[0][1] - self.interval
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
                     self.buy_stack.insert(0, ("buy", buy_price, buy_order_id))
-                self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {elem[1]}")
-            if self.buy_stack:
-                self.get_income(self.init_cost, price)
+                self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {self.now}")
+            # if self.buy_stack:
+            #     self.get_income(self.init_cost, price)
         self.lock = False
         
     def get_income(self, init_cost, price):
@@ -157,8 +162,11 @@ if __name__ == '__main__':
     
     service = s['service']
     trade = s['trade']
+    API_KEY = s['api']['key']
+    API_SECRET = s['api']['secret']
+    checker = Checker(API_KEY, API_SECRET)
     requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'])
-    trader = Trader(s['trade']['crypto-name'], requester, "", "")
+    trader = Trader(s['trade']['crypto-name'], requester, checker, "", "")
     crypto_amount, JPY = requester.get_wallets(1)
     price_now = trader.get_price()
     crypto, JPY = trader.cal_cost(crypto_amount, JPY, price_now, trade['grid-number'], trade['interval'])

@@ -2,6 +2,7 @@ import asyncio
 import yaml
 from trader import Trader
 from requester import Requester
+from checker import Checker
 
 
 async def async_main():
@@ -12,10 +13,13 @@ async def async_main():
     service = s['service']
     requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mode=service['mode'])
     webhook = s['discord']
-    trader = Trader(s['trade']['crypto-name'], requester, webhook['info'], webhook['error'])
+    API_KEY = s['api']['key']
+    API_SECRET = s['api']['secret']
+    checker = Checker(API_KEY, API_SECRET)
+    trader = Trader(s['trade']['crypto-name'], requester, checker, webhook['info'], webhook['error'])
     trader.init(s['trade']['grid-number'], s['trade']['interval'])
 
-    interval = 1  # seconds
+    interval = 1 # seconds
     while True:
         await asyncio.sleep(interval - timer() % interval)
         try:
