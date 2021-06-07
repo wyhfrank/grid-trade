@@ -32,7 +32,8 @@ class Requester(object):
     def make_order(self, amount, price, action):
         ## print(f"make order action: {action} {amount} on {price}")
         if self.mode == "local":
-            return
+            print(f"make order action: {action} {amount} on {price} - order_id")
+            return 
         elif self.mode == "mock":
             path = "api/mock/trade"
         elif self.mode == "prod":

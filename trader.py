@@ -164,3 +164,5 @@ if __name__ == '__main__':
     crypto, JPY = trader.cal_cost(crypto_amount, JPY, price_now, trade['grid-number'], trade['interval'])
     unit = normalizeFloat(crypto / trade['grid-number'] * 2)
     print(f"Total cost: {JPY + crypto * price_now}, with JPY: {JPY} & {trader.crypto_name}: {crypto} per uint: {unit}")
+    print(trader.get_price())
+
