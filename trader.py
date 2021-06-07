@@ -112,7 +112,7 @@ class Trader(object):
                 if self.buy_stack[-1][1] == price and not self.checker.check_order(f"{self.buy_stack[-1][2]}"):
                     break
                 self.count += 1
-                self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
+                # self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
                 save_elem = self.buy_stack.pop()
                 self.requester.save_order("buy", save_elem[1], save_elem[2])
                 sell_order_id = self.requester.make_order(self.unit, self.now, "sell")
