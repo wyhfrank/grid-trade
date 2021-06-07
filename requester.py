@@ -30,7 +30,7 @@ class Requester(object):
         return requests.post(url, headers=headers, data=data)
 
     def make_order(self, amount, price, action):
-        print(f"make order action: {action} {amount} on {price}")
+        ## print(f"make order action: {action} {amount} on {price}")
         if self.mode == "local":
             return
         elif self.mode == "mock":
@@ -56,6 +56,7 @@ class Requester(object):
                 data = res.json()['data']['order_id']
             except:
                 data = 99999999
+            print(f"make order action: {action} {amount} on {price} - {data}")
             return data
 
     def save_order(self, order_id):
