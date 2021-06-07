@@ -59,6 +59,7 @@ class Requester(object):
             except:
                 order_id = 99999999
                 print(f"{now},make_{action},{price},{order_id},false")
+                return order_id
             print(f"{now},make_{action},{price},{order_id},true")
             return order_id
 
