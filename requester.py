@@ -1,6 +1,7 @@
 import requests
 import json
 import yaml
+import datetime
 
 
 class Requester(object):
@@ -30,10 +31,9 @@ class Requester(object):
         return requests.post(url, headers=headers, data=data)
 
     def make_order(self, amount, price, action):
-        print(f"make order action: {action} {amount} on {price}")
         if self.mode == "local":
             print(f"make order action: {action} {amount} on {price} - order_id")
-            return 
+            return
         elif self.mode == "mock":
             path = "api/mock/trade"
         elif self.mode == "prod":
@@ -49,18 +49,20 @@ class Requester(object):
             "type": "limit"
         }
         res = self.post(path, body)
+        now = self.get_now()
         if res.status_code != 200:
-            print(res.content)
+            print(f"{now},make_{action},{price},99999999,false")
             return 99999999
         else:
             try:
-                data = res.json()['data']['order_id']
+                order_id = res.json()['data']['order_id']
             except:
-                data = 99999999
-            print(f"make order action: {action} {amount} on {price} - {data}")
-            return data
+                order_id = 99999999
+                print(f"{now},make_{action},{price},{order_id},false")
+            print(f"{now},make_{action},{price},{order_id},true")
+            return order_id
 
-    def save_order(self, order_id):
+    def save_order(self, action, price, order_id):
         print(f"save order {order_id}")
         if self.mode == "local":
             return
@@ -77,8 +79,11 @@ class Requester(object):
             "crypto_name": self.crypto_name
         }
         res = self.post(path, body)
+        now = self.get_now()
         if res.status_code != 202:
-            print("Fail to save order")
+            print(f"{now},save_{action},{price},{order_id},false")
+            return
+        print(f"{now},save_{action},{price},{order_id},true")
 
     def get_wallets(self, strategy):
         path = "api/admin/auto_trade"
@@ -92,9 +97,8 @@ class Requester(object):
         else:
             data = res.json()['data'][0]
             return data['amount'], data['JPY']
-    
-    def cancel_order(self, order_id):
-        print(f"cancel_order: {order_id}")
+
+    def cancel_order(self, action, price, order_id):
         if self.mode == "local":
             return
         elif self.mode != "prod" and self.mode != "mock":
@@ -106,16 +110,20 @@ class Requester(object):
             "order_id": f"{order_id}",
         }
         res = self.post(path, body)
+        now = self.get_now()
         if res.status_code != 200:
-            print(res.content)
-            print(f"Fail to cancel order {order_id}") 
+            print(f"{now},cancel_{action},{price},{order_id},false")
+            return
+        print(f"{now},cancel_{action},{price},{order_id},true")
 
+    def get_now(self):
+        now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
+        return now.strftime('%Y-%m-%d %H:%M:%S')
 
 
 if __name__ == '__main__':
     with open('config.yml', 'r') as f:
         s = yaml.safe_load(f)
-    
     service = s['service']
     requeseter = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'])
     a, b = requeseter.get_wallets(1)

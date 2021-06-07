@@ -6,6 +6,7 @@ import requests
 import json
 from checker import Checker
 
+
 class Trader(object):
     def __init__(self, crypto_name, requester, checker, d_info, d_err):
         self.crypto_name = crypto_name
@@ -29,7 +30,7 @@ class Trader(object):
 
     def get_price(self):
         return float(self.PUB.get_ticker(f'{self.crypto_name}_jpy')['last'])
-    
+
     def cal_cost(self, crypto_amount, JPY, price_now, grid_number, interval):
         self.interval = interval
         if grid_number % 2 != 0:
@@ -80,7 +81,7 @@ class Trader(object):
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.crypto_amount - self.unit)
                 elem = self.sell_stack.pop()
-                self.requester.save_order(elem[2])
+                self.requester.save_order("sell", elem[1], elem[2])
                 buy_order_id = self.requester.make_order(self.unit, self.now, "buy")
                 self.buy_stack.append(("buy", self.now, buy_order_id))
                 self.JPY = normalizeFloat(self.JPY + (elem[1] * self.unit * 1.0002))
@@ -89,7 +90,7 @@ class Trader(object):
                 if self.sell_stack[0][1] + self.interval <= self.cell:
                     # cancel the lowest buy order 
                     elem = self.buy_stack.pop(0)
-                    self.requester.cancel_order(elem[2])
+                    self.requester.cancel_order("buy", elem[1], elem[2])
                     # add highest sell order
                     sell_price = self.sell_stack[0][1] + self.interval
                     sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
@@ -106,7 +107,7 @@ class Trader(object):
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
                 elem = self.buy_stack.pop()
-                self.requester.save_order(elem[2])
+                self.requester.save_order("buy", elem[1], elem[2])
                 sell_order_id = self.requester.make_order(self.unit, self.now, "sell")
                 self.sell_stack.append(("sell", self.now, sell_order_id))
                 self.JPY = normalizeFloat(self.JPY - (elem[1] * self.unit * 0.9998))
@@ -114,7 +115,7 @@ class Trader(object):
                 if self.buy_stack[0][1] - self.interval >= self.ground:
                     # cancel the highest buy order 
                     elem = self.sell_stack.pop(0)
-                    self.requester.cancel_order(elem[2])
+                    self.requester.cancel_order("buy", elem[1], elem[2])
                     # add highest sell order
                     buy_price = self.buy_stack[0][1] - self.interval
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
@@ -147,10 +148,9 @@ class Trader(object):
     
     def cancel_all(self):
         for sell_order in self.sell_stack:
-            self.requester.cancel_order(sell_order[2])
+            self.requester.cancel_order(sell_order[0], sell_order[1], sell_order[2])
         for buy_order in self.buy_stack:
-            self.requester.cancel_order(buy_order[2])
-
+            self.requester.cancel_order(buy_order[0], buy_order[1], buy_order[2])
 
 def normalizeFloat(data):
     return round(data, 4)

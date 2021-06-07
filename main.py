@@ -2,12 +2,17 @@ import socketio
 import yaml
 from trader import Trader
 from requester import Requester
+from checker import Checker
 
 with open('config.yml', 'r') as f:
     s = yaml.safe_load(f)
 service = s['service']
 requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mode=service['mode'])
 webhook = s['discord']
+API_KEY = s['api']['key']
+API_SECRET = s['api']['secret']
+checker = Checker(API_KEY, API_SECRET)
+checker = Checker()
 trader = Trader(s['trade']['crypto-name'], requester, webhook['info'], webhook['error'])
 trader.init(s['trade']['grid-number'], s['trade']['interval'])
 sio = socketio.Client()
