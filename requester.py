@@ -58,9 +58,9 @@ class Requester(object):
                 order_id = res.json()['data']['order_id']
             except:
                 order_id = 99999999
-                print(f"{now},make_{action},{price},{order_id},false")
+                print(f"{now},make_{action},{price},{order_id},false", flush=True)
                 return order_id
-            print(f"{now},make_{action},{price},{order_id},true")
+            print(f"{now},make_{action},{price},{order_id},true", flush=True)
             return order_id
 
     def save_order(self, action, price, order_id):
@@ -82,9 +82,9 @@ class Requester(object):
         res = self.post(path, body)
         now = self.get_now()
         if res.status_code != 202:
-            print(f"{now},save_{action},{price},{order_id},false")
+            print(f"{now},save_{action},{price},{order_id},false", flush=True)
             return
-        print(f"{now},save_{action},{price},{order_id},true")
+        print(f"{now},save_{action},{price},{order_id},true", flush=True)
 
     def get_wallets(self, strategy):
         path = "api/admin/auto_trade"
@@ -113,9 +113,9 @@ class Requester(object):
         res = self.post(path, body)
         now = self.get_now()
         if res.status_code != 200:
-            print(f"{now},cancel_{action},{price},{order_id},false")
+            print(f"{now},cancel_{action},{price},{order_id},false", flush=True)
             return
-        print(f"{now},cancel_{action},{price},{order_id},true")
+        print(f"{now},cancel_{action},{price},{order_id},true", flush=True)
 
     def get_now(self):
         now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
