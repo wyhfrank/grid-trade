@@ -64,7 +64,7 @@ class Requester(object):
             return order_id
 
     def save_order(self, action, price, order_id):
-        print(f"save order {order_id}")
+        # print(f"save order {order_id}")
         if self.mode == "local":
             return
         elif self.mode == "mock":

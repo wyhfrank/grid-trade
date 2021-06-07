@@ -66,7 +66,7 @@ class Trader(object):
         self.init_cost = normalizeFloat(self.JPY + self.crypto_amount * price_now)
         self.ground = price_now - interval * half_grid_number
         self.cell = price_now + interval * half_grid_number
-        print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
+        # print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
         self.lock = False
 
     def trade(self, price):
