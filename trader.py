@@ -20,12 +20,14 @@ class Trader(object):
         self.requester = requester
         self.lock = False
         self.count = 0
+        self.profit = 0
         self.crypto_amount = 0
         self.JPY = 0
         self.init_cost = 0
         self.cell = 0
         self.ground = 0
         self.interval = 0
+        self.total_profit = 0
         self.checker = checker
 
     def get_price(self):
@@ -66,7 +68,10 @@ class Trader(object):
         self.init_cost = normalizeFloat(self.JPY + self.crypto_amount * price_now)
         self.ground = price_now - interval * half_grid_number
         self.cell = price_now + interval * half_grid_number
-        # print(f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
+        self.send_msg("info", f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
+        fee = normalizeFloat(self.price * self.unit * 0.0002)
+        self.profit = normalizeFloat(self.interval * self.unit)
+        self.send_msg("info", f"income with {self.profit} for every buy_sell pair, {fee} for every transaction")
         self.lock = False
 
     def trade(self, price):
@@ -79,55 +84,59 @@ class Trader(object):
                 if self.sell_stack[-1][1] == price and not self.checker.check_order(f"{self.sell_stack[-1][2]}"):
                     break
                 self.count += 1
-                self.crypto_amount = normalizeFloat(self.crypto_amount - self.unit)
-                elem = self.sell_stack.pop()
-                self.requester.save_order("sell", elem[1], elem[2])
+                # self.crypto_amount = normalizeFloat(self.crypto_amount - self.unit)
+                save_elem = self.sell_stack.pop()
+                self.requester.save_order("sell", save_elem[1], save_elem[2])
                 buy_order_id = self.requester.make_order(self.unit, self.now, "buy")
                 self.buy_stack.append(("buy", self.now, buy_order_id))
-                self.JPY = normalizeFloat(self.JPY + (elem[1] * self.unit * 1.0002))
-                self.now = elem[1]
+                # self.JPY = normalizeFloat(self.JPY + (save_elem[1] * self.unit * 1.0002))
+                self.total_profit = self.total_profit + self.profit + normalizeFloat(self.now * 0.0002)
+                self.now = save_elem[1]
                 # if not reach cell
                 if self.sell_stack[0][1] + self.interval <= self.cell:
                     # cancel the lowest buy order 
-                    elem = self.buy_stack.pop(0)
-                    self.requester.cancel_order("buy", elem[1], elem[2])
+                    cancel_elem = self.buy_stack.pop(0)
+                    self.requester.cancel_order("buy", cancel_elem[1], cancel_elem[2])
                     # add highest sell order
                     sell_price = self.sell_stack[0][1] + self.interval
                     sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
                     self.sell_stack.insert(0, ("sell", sell_price, sell_order_id))
-                self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {self.now}")
+                self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {self.now}, profit now: {self.total_profit}")
+                self.send_msg("info", f"make buy: {buy_order_id}, cancel: {cancel_elem[2]}, make: sell: {sell_order_id}")
             # if self.sell_stack:
             #     self.get_income(self.init_cost, price)
 
         # buy when price get low
-        if self.buy_stack and self.buy_stack[-1][1] >= price:
+        elif self.buy_stack and self.buy_stack[-1][1] >= price:
             while self.buy_stack and self.buy_stack[-1][1] >= price:
                 if self.buy_stack[-1][1] == price and not self.checker.check_order(f"{self.buy_stack[-1][2]}"):
                     break
                 self.count += 1
                 self.crypto_amount = normalizeFloat(self.unit + self.crypto_amount)
-                elem = self.buy_stack.pop()
-                self.requester.save_order("buy", elem[1], elem[2])
+                save_elem = self.buy_stack.pop()
+                self.requester.save_order("buy", save_elem[1], save_elem[2])
                 sell_order_id = self.requester.make_order(self.unit, self.now, "sell")
                 self.sell_stack.append(("sell", self.now, sell_order_id))
-                self.JPY = normalizeFloat(self.JPY - (elem[1] * self.unit * 0.9998))
-                self.now = elem[1]
+                # self.JPY = normalizeFloat(self.JPY - (elem[1] * self.unit * 0.9998))
+                self.total_profit = self.total_profit + normalizeFloat(self.now * 0.0002)
+                self.now = save_elem[1]
                 if self.buy_stack[0][1] - self.interval >= self.ground:
                     # cancel the highest buy order 
-                    elem = self.sell_stack.pop(0)
-                    self.requester.cancel_order("buy", elem[1], elem[2])
+                    cancel_elem = self.sell_stack.pop(0)
+                    self.requester.cancel_order("buy", cancel_elem[1], cancel_elem[2])
                     # add highest sell order
                     buy_price = self.buy_stack[0][1] - self.interval
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
                     self.buy_stack.insert(0, ("buy", buy_price, buy_order_id))
-                self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {self.now}")
+                self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {self.now}, profit now: {self.total_profit}")
+                self.send_msg("info", f"make cell: {sell_order_id}, cancel: {cancel_elem[2]}, make: sell: {sell_order_id}")
             # if self.buy_stack:
             #     self.get_income(self.init_cost, price)
         self.lock = False
         
-    def get_income(self, init_cost, price):
-        income = self.JPY + self.crypto_amount * price - init_cost
-        self.send_msg("info", f"JPY: {self.JPY:.4f}, {self.crypto_name}:{self.crypto_amount}, init_cost: {init_cost:.4f}, income:{income:.4f}")
+    # def get_income(self, init_cost, price):
+    #     income = self.JPY + self.crypto_amount * price - init_cost
+    #     self.send_msg("info", f"JPY: {self.JPY:.4f}, {self.crypto_name}:{self.crypto_amount}, init_cost: {init_cost:.4f}, income:{income:.4f}")
 
     def status(self):
         print(f"{len(self.buy_stack)} : {self.buy_stack}")

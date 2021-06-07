@@ -1,13 +1,16 @@
 import python_bitbankcc
 import yaml
-import json
 
 class Checker(object):
     def __init__(self, key, secret):
         self.prv = python_bitbankcc.private(key, secret)
     
     def check_order(self, order_id):
-        value = self.prv.get_order("eth_jpy", order_id)
+        try:
+            value = self.prv.get_order("eth_jpy", order_id)
+            # print(value)
+        except e:
+            return False
         return value['status'] == "FULLY_FILLED"
 
 if __name__ == '__main__':
@@ -16,4 +19,4 @@ if __name__ == '__main__':
     API_KEY = s['api']['key']
     API_SECRET = s['api']['secret']
     checker = Checker(API_KEY, API_SECRET)
-    print(checker.check_order('14963278906'))
+    print(checker.check_order('14971423806'))

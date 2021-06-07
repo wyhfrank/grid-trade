@@ -120,7 +120,7 @@ class Requester(object):
     def get_now(self):
         now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
         return now.strftime('%Y-%m-%d %H:%M:%S')
-
+    
 
 if __name__ == '__main__':
     with open('config.yml', 'r') as f:
