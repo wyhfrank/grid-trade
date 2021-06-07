@@ -69,7 +69,7 @@ class Trader(object):
         self.ground = price_now - interval * half_grid_number
         self.cell = price_now + interval * half_grid_number
         self.send_msg("info", f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
-        fee = normalizeFloat(self.price * self.unit * 0.0002)
+        fee = normalizeFloat(price_now * self.unit * 0.0002)
         self.profit = normalizeFloat(self.interval * self.unit)
         self.send_msg("info", f"income with {self.profit} for every buy_sell pair, {fee} for every transaction")
         self.lock = False
