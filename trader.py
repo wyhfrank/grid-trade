@@ -51,6 +51,8 @@ class Trader(object):
         Build grid according to price of crypto currency now
         Set grid number & interval you want
         """
+        if self.lock == True:
+            return
         self.lock = True
         crypto_amount, JPY = self.requester.get_wallets(1)
         price_now = self.get_price()
