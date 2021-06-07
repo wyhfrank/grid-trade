@@ -92,7 +92,7 @@ class Trader(object):
                 buy_order_id = self.requester.make_order(self.unit, self.now, "buy")
                 self.buy_stack.append(("buy", self.now, buy_order_id))
                 # self.JPY = normalizeFloat(self.JPY + (save_elem[1] * self.unit * 1.0002))
-                self.total_profit = self.total_profit + self.profit + normalizeFloat(self.now * 0.0002)
+                self.total_profit = normalizeFloat(self.total_profit + self.profit + self.now * 0.0002 * * self.unit)
                 self.now = save_elem[1]
                 # if not reach cell
                 if self.sell_stack[0][1] + self.interval <= self.cell:
@@ -104,7 +104,7 @@ class Trader(object):
                     sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
                     self.sell_stack.insert(0, ("sell", sell_price, sell_order_id))
                 self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {self.now}, profit now: {self.total_profit}")
-                self.send_msg("info", f"make buy: {buy_order_id}, cancel: {cancel_elem[2]}, make: sell: {sell_order_id}")
+                self.send_msg("info", f"make buy: {buy_order_id}, cancel: {cancel_elem[2]}, make sell: {sell_order_id}")
             # if self.sell_stack:
             #     self.get_income(self.init_cost, price)
 
@@ -120,7 +120,7 @@ class Trader(object):
                 sell_order_id = self.requester.make_order(self.unit, self.now, "sell")
                 self.sell_stack.append(("sell", self.now, sell_order_id))
                 # self.JPY = normalizeFloat(self.JPY - (elem[1] * self.unit * 0.9998))
-                self.total_profit = self.total_profit + normalizeFloat(self.now * 0.0002)
+                self.total_profit = normalizeFloat(self.total_profit + self.now * 0.0002 * self.unit)
                 self.now = save_elem[1]
                 if self.buy_stack[0][1] - self.interval >= self.ground:
                     # cancel the highest buy order 
@@ -131,7 +131,7 @@ class Trader(object):
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
                     self.buy_stack.insert(0, ("buy", buy_price, buy_order_id))
                 self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {self.now}, profit now: {self.total_profit}")
-                self.send_msg("info", f"make cell: {sell_order_id}, cancel: {cancel_elem[2]}, make: sell: {sell_order_id}")
+                self.send_msg("info", f"make sell: {sell_order_id}, cancel: {cancel_elem[2]}, make buy: {buy_order_id}")
             # if self.buy_stack:
             #     self.get_income(self.init_cost, price)
         self.lock = False
