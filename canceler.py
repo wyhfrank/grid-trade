@@ -1,6 +1,7 @@
 import yaml
 import python_bitbankcc
 from checker import Checker
+import sys
 
 class Canceler(Checker):
     def __init__(self, key, secret):
@@ -13,7 +14,12 @@ class Canceler(Checker):
 
 
 if __name__ == '__main__':
-    with open('config.yml', 'r') as f:
+    argv = sys.argv[1:]
+    try:
+        path = argv[0]
+    except:
+        raise ValueError("NEED TO ENTER CONFIG ARGUMENT")
+    with open(path, 'r') as f:
         s = yaml.safe_load(f)
     API_KEY = s['api']['key']
     API_SECRET = s['api']['secret']

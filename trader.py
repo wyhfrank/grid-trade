@@ -5,6 +5,7 @@ import time
 import requests
 import json
 from checker import Checker
+import sys
 
 
 class Trader(object):
@@ -160,14 +161,19 @@ class Trader(object):
         for buy_order in self.buy_stack:
             self.requester.cancel_order(buy_order[0], buy_order[1], buy_order[2])
 
+
 def normalizeFloat(data):
     return round(data, 4)
 
 
 if __name__ == '__main__':
-    with open('config.yml', 'r') as f:
+    argv = sys.argv[1:]
+    try:
+        path = argv[0]
+    except:
+        raise ValueError("NEED TO ENTER CONFIG ARGUMENT")
+    with open(path, 'r') as f:
         s = yaml.safe_load(f)
-    
     service = s['service']
     trade = s['trade']
     API_KEY = s['api']['key']

@@ -3,12 +3,18 @@ import yaml
 from trader import Trader
 from requester import Requester
 from checker import Checker
+import sys
 
 
 async def async_main():
     timer = asyncio.get_event_loop().time
     # need to change the path to absolute path
-    with open('config.yml', 'r') as f:
+    argv = sys.argv[1:]
+    try:
+        path = argv[0]
+    except:
+        raise ValueError("NEED TO ENTER CONFIG ARGUMENT")
+    with open(path, 'r') as f:
         s = yaml.safe_load(f)
     service = s['service']
     requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'], mode=service['mode'])
