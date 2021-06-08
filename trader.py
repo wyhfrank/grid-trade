@@ -35,6 +35,8 @@ class Trader(object):
         return float(self.PUB.get_ticker(f'{self.crypto_name}_jpy')['last'])
 
     def cal_cost(self, crypto_amount, JPY, price_now, grid_number, interval, save_rate=0.67):
+        """ 根據給的 crypto_amount 跟 JPY 計算出最大投資加密貨幣及JPY
+        """
         self.interval = interval
         if grid_number % 2 != 0:
             raise ValueError("Wrong format on grid number")
@@ -44,7 +46,7 @@ class Trader(object):
         JPY_need = tmp * crypto_each_grid
         if JPY_need > JPY:
             crypto_each_grid = JPY / tmp
-            return normalizeFloat(crypto_each_grid * save_rate) * 100, normalizeFloat(JPY * save_rate)
+            return normalizeFloat(crypto_each_grid * save_rate  * half_grid_count) , normalizeFloat(JPY * save_rate)
         return normalizeFloat(crypto_amount * save_rate), normalizeFloat(JPY_need * save_rate)
 
     def init(self, grid_number, interval):
