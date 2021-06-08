@@ -44,7 +44,7 @@ class Trader(object):
         JPY_need = tmp * crypto_each_grid
         if JPY_need > JPY:
             crypto_each_grid = JPY / tmp
-            return normalizeFloat(crypto_each_grid) * 100, JPY
+            return normalizeFloat(crypto_each_grid * save_rate) * 100, normalizeFloat(JPY * save_rate)
         return normalizeFloat(crypto_amount * save_rate), normalizeFloat(JPY_need * save_rate)
 
     def init(self, grid_number, interval):
