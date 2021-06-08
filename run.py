@@ -3,7 +3,6 @@ import yaml
 from trader import Trader
 from requester import Requester
 from checker import Checker
-import time
 
 
 async def async_main():
