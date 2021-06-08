@@ -33,7 +33,7 @@ class Trader(object):
     def get_price(self):
         return float(self.PUB.get_ticker(f'{self.crypto_name}_jpy')['last'])
 
-    def cal_cost(self, crypto_amount, JPY, price_now, grid_number, interval):
+    def cal_cost(self, crypto_amount, JPY, price_now, grid_number, interval, save_rate=0.67):
         self.interval = interval
         if grid_number % 2 != 0:
             raise ValueError("Wrong format on grid number")
@@ -44,7 +44,7 @@ class Trader(object):
         if JPY_need > JPY:
             crypto_each_grid = JPY / tmp
             return normalizeFloat(crypto_each_grid) * 100, JPY
-        return normalizeFloat(crypto_amount), normalizeFloat(JPY_need)
+        return normalizeFloat(crypto_amount * save_rate), normalizeFloat(JPY_need * save_rate)
 
     def init(self, grid_number, interval):
         """
@@ -68,12 +68,13 @@ class Trader(object):
                 time.sleep(0.1)
         self.JPY, self.crypto_amount, self.now = JPY, crypto_amount, price_now
         self.init_cost = normalizeFloat(self.JPY + self.crypto_amount * price_now)
-        self.ground = price_now - interval * half_grid_number
-        self.cell = price_now + interval * half_grid_number
+        self.ground = normalizeFloat(price_now - interval * half_grid_number)
+        self.cell = normalizeFloat(price_now + interval * half_grid_number)
         self.send_msg("info", f"inital cost: {self.init_cost} with JPY: {self.JPY} & {self.crypto_name}: {self.crypto_amount}")
         fee = normalizeFloat(price_now * self.unit * 0.0002)
         self.profit = normalizeFloat(self.interval * self.unit)
         self.send_msg("info", f"income with {self.profit} for every buy_sell pair, {fee} for every transaction")
+        self.send_msg("info", f"In this round - cell:{self.cell}, ground: {self.ground}")
         self.lock = False
 
     def trade(self, price):
@@ -104,9 +105,6 @@ class Trader(object):
                     sell_order_id = self.requester.make_order(self.unit, sell_price, "sell")
                     self.sell_stack.insert(0, ("sell", sell_price, sell_order_id))
                 self.send_msg("info", f"#{self.count} sell {self.unit} {self.crypto_name} on price: {self.now}, profit now: {self.total_profit}")
-                self.send_msg("info", f"make buy: {buy_order_id}, cancel: {cancel_elem[2]}, make sell: {sell_order_id}")
-            # if self.sell_stack:
-            #     self.get_income(self.init_cost, price)
 
         # buy when price get low
         elif self.buy_stack and self.buy_stack[-1][1] >= price:
@@ -131,7 +129,6 @@ class Trader(object):
                     buy_order_id = self.requester.make_order(self.unit, buy_price, "buy")
                     self.buy_stack.insert(0, ("buy", buy_price, buy_order_id))
                 self.send_msg("info", f"#{self.count} buy {self.unit} {self.crypto_name} on price: {self.now}, profit now: {self.total_profit}")
-                self.send_msg("info", f"make sell: {sell_order_id}, cancel: {cancel_elem[2]}, make buy: {buy_order_id}")
             # if self.buy_stack:
             #     self.get_income(self.init_cost, price)
         self.lock = False
