@@ -9,8 +9,8 @@ class Canceler(Checker):
 
     def cancel_all(self, crypto_pair):
         targets = super().get_orders_id()
-        print(f"cancel orders: {len(targets)}")
-        super().prv.cancel_orders(crypto_pair, targets)
+        prv = super().get_prv()
+        prv.cancel_orders(crypto_pair, targets)
 
 
 if __name__ == '__main__':

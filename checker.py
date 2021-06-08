@@ -30,6 +30,9 @@ class Checker(object):
             rst.append(order['order_id'])
         return rst
 
+    def get_prv(self):
+        return self.prv
+
 
 if __name__ == '__main__':
     argv = sys.argv[1:]
