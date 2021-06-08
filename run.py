@@ -24,7 +24,7 @@ async def async_main():
         await asyncio.sleep(interval - timer() % interval)
         try:
             price = trader.get_price()
-        except e:
+        except:
             trader.send_msg("Error", "Grid trade fail to get price")
             continue
         # if len(trader.sell_stack) > 0 and len(trader.buy_stack) > 0:

@@ -9,7 +9,8 @@ class Checker(object):
         try:
             value = self.prv.get_order("eth_jpy", order_id)
             # print(value)
-        except e:
+        except:
+            print(f"Fail to get {order_id}")
             return False
         return value['status'] == "FULLY_FILLED"
 
