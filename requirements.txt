@@ -1,0 +1,4 @@
+git+https://github.com/bitbankinc/python-bitbankcc@e82d8e5#egg=python-bitbankcc
+pyyaml
+requests
+pandas

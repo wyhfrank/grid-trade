@@ -22,6 +22,7 @@ class Requester(object):
     def get(self, path, payload):
         headers = self.get_headers()
         url = f"http://{self.host}:8080/{path}"
+        print(url)
         return requests.get(url, headers=headers, params=payload)
     
     def post(self, path, payload):
@@ -128,3 +129,4 @@ if __name__ == '__main__':
     service = s['service']
     requeseter = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'])
     a, b = requeseter.get_wallets(1)
+    print(a, b)

@@ -181,7 +181,7 @@ if __name__ == '__main__':
     API_KEY = s['api']['key']
     API_SECRET = s['api']['secret']
     checker = Checker(API_KEY, API_SECRET)
-    requester = Requester(service['host'], service['token'], service['uid'], s['trade']['crypto-name'])
+    requester = Requester(service['host'], service['token'], service['uid'], s['tra£de']['crypto-name'])
     trader = Trader(s['trade']['crypto-name'], requester, checker, "", "")
     crypto_amount, JPY = requester.get_wallets(1)
     price_now = trader.get_price()
