@@ -282,8 +282,7 @@ class OrderManager:
         
         @property
         def expected_size(self):
-            return (len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created])) 
-                    - len(self.get_orders_by_status(status_list=[OrderStatus.ToCancel])))
+            return len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created])) 
             
     def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_size=1) -> None:
         self.price_interval = price_interval
