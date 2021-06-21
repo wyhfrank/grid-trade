@@ -125,18 +125,39 @@ class OrderStatus(Enum):
 
 
 class Order:
-    def __init__(self, price, amount, id=None, couple_id=None, side=OrderSide.Buy) -> None:
+    def __init__(self, price, amount, id=None, couple_id=None, side=OrderSide.Buy, status=OrderStatus.ToCreate) -> None:
         self.id = id
         self.couple_id = couple_id
         self.side = side
         self.price = price
         self.amount = amount
-        self.status = OrderStatus.ToCreate
+        self.status = status
     
-    def copy(self, price_interval, direction='inner'):
+    def mark_cancel(self):
+        self.status = OrderStatus.ToCancel
+    
+    def create_ok(self):
+        if self.status == OrderStatus.ToCreate:
+            self.status = OrderStatus.Created
+        else:
+            print(f"Warning: order was not at status ToCreate. {self}")
+
+    def cancel_ok(self):
+        if self.status == OrderStatus.ToCancel:
+            self.status = OrderStatus.Cancelled
+        else:
+            print(f"Warning: order was not at status ToCancel. {self}")  
+
+    def trade_ok(self):
+        if self.status == OrderStatus.Created:
+            self.status = OrderStatus.Traded
+        else:
+            print(f"Warning: order was not at status Created when being Traded. {self}")   
+
+    def copy(self, price_interval, direction='inner', status=OrderStatus.ToCreate):
         flag = self.get_direction_flag(self.side, direction=direction)
         new_price = self.price + flag * price_interval
-        obj = self.__class__(price=new_price, amount=self.amount, side=self.side)
+        obj = self.__class__(price=new_price, amount=self.amount, side=self.side, status=status)
         return obj
     
     @classmethod
@@ -157,9 +178,7 @@ class OrderManager:
         def __init__(self, om, side: OrderSide) -> None:
             self.om = om
             self.side = side
-            self.orders = []
-            self.to_create = []
-            self.to_cancel = []
+            self._orders = []
         
         @property
         def price_interval(self):
@@ -179,89 +198,92 @@ class OrderManager:
         
         @property
         def order_ids(self):
-            return [o.id for o in self.orders]
+            return [o.id for o in self._orders]
         
         @property
         def best_order(self):
             self.sort()
-            return self.orders[0] if len(self.orders) > 0 else None
-        
+            return self._orders[0] if len(self._orders) > 0 else None
+
+        @property
+        def to_create(self):
+            return self.get_orders_by_status(status_list=[OrderStatus.ToCreate])
+
+        @property
+        def to_cancel(self):
+            return self.get_orders_by_status(status_list=[OrderStatus.ToCancel])
+
+        @property
+        def active_orders(self):
+            return self.get_orders_by_status(status_list=[OrderStatus.Created])
+
+        def get_orders_by_status(self, status_list):
+            return list(filter(lambda o: o.status in status_list, self._orders))
+
         def sort(self):
             desc = self.side == OrderSide.Buy
-            self.orders.sort(key=lambda x: x.price, reverse=desc)
+            self._orders.sort(key=lambda x: x.price, reverse=desc)
         
         def get_order(self, order_id):
-            for o in self.orders:
+            for o in self._orders:
                 if order_id == o.id:
                     return o
             return None
         
         def prepare_init(self, init_price):
             """ Init stack with limited numbers of orders, based on init_price """
-            if len(self.to_create) > 0:
-                print(f"CARE: to_adds is not empty during init. clearing...")
-                self.to_create.clear()
 
             for i in range(self.active_limit):
                 flag = Order.get_direction_flag(self.side, direction="outer")
                 price = init_price + flag * self.price_interval * (i+1)
                 o = Order(price=price, amount=self.unit_amount, side=self.side)
-                self.to_create.append(o)
+                self._orders.append(o)
 
         def refill_orders(self, count=1, direction="inner"):
             """ Refill the stack with certain numbers of orders with direction
                     direction: `inner`  means towards the center of current price
                                 `outer` means creating more backup orders
             """
-            if len(self.to_create) > 0:
-                print(f"CARE: to_adds is not empty.")
-                # self.to_adds.clear()
-            if self.best_order:
+            if self.best_order and count > 0:
                 for i in range(count):
                     o = self.best_order.copy(self.price_interval * (i+1), direction=direction)
-                    self.to_create.append(o)
+                    self._orders.append(o)
+                self.sort()
 
-        # def grow_outer(self, count=1):
-        #     if len(self.to_create) > 0:
-        #         print(f"CARE: to_adds is not empty.")
-        #         # self.to_adds.clear()
-        #     if self.best_order:
-        #         for i in range(count):
-        #             o = self.best_order.copy(self.price_interval * (i+1), direction="outer")
-        #             self.to_create.append(o)
-        
         def shrink_outer(self, count=1):
             """ Prepare to remove `count` of the orders from the outer """
             if count <= 0:
                 return 
-            self.to_cancel.extend(self.orders[-count:-1])
+            for o in self._orders[-count:-1]:
+                o.mark_cancel()
         
         def order_create_ok(self, order):
             if order in self.to_create:
-                self.to_create.remove(order)
-                self.orders.append(order)
-                order.status = OrderStatus.Created
-                self.sort()
+                order.create_ok()
             else:
                 print(f"Order not found in to_create: {order}")
         
         def order_cancel_ok(self, order):
             if order in self.to_cancel:
-                self.to_cancel.remove(order)
-                self.orders.remove(order)
-                # TODO: update db records of this order
-                order.status = OrderStatus.Cancelled
-                self.sort()
+                order.cancel_ok()
             else:
                 print(f"Order not found in to_cancel: {order}")
         
         def order_traded(self, order):
-            if order in self.orders:
-                order.status = OrderStatus.Traded
+            if order in self.active_orders:
+                order.trade_ok()
                 # TODO: update db records of this order
-                self.orders.remove(order)
+                self._orders.remove(order)
             else:
                 print(f"Order not found in active orders in {self.side} stack: {order}")
+        
+        def remove_all(self):
+            self._orders.clear()
+        
+        @property
+        def expected_size(self):
+            return (len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created])) 
+                    - len(self.get_orders_by_status(status_list=[OrderStatus.ToCancel])))
             
     def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_size=1) -> None:
         self.price_interval = price_interval
@@ -296,20 +318,20 @@ class OrderManager:
     
     @property
     def active_orders(self):
-        return [*self.buy_stack.orders, *self.sell_stack.orders]
+        return [*self.buy_stack.active_orders, *self.sell_stack.active_orders]
     
     @property
     def active_order_ids(self):
         return [o.id for o in self.active_orders]
     
     def print_stacks(self):
-        for o in [*reversed(self.sell_stack.orders), *self.buy_stack.orders]:
+        for o in [*reversed(self.sell_stack.active_orders), *self.buy_stack.active_orders]:
             print(f"OID<{o.id}> {o.side.name} P[{o.price}]")
     
     def remove_all(self):
         print("TODO: save all orders into db")
         for stack in [self.buy_stack, self.sell_stack]:
-            stack.orders.clear()
+            stack.remove_all()
     
     def get_order_by_id(self, order_id):
         """ Find the order and the corresponding stack if exists """
@@ -342,9 +364,11 @@ class OrderManager:
 
         # return
         # TODO: Balance the two stacks if needed
-        exp_buy_size = len(self.buy_stack.orders) + len(self.buy_stack.to_create)
-        exp_sell_size = len(self.sell_stack.orders) + len(self.sell_stack.to_create)
+        exp_buy_size = self.buy_stack.expected_size
+        exp_sell_size = self.sell_stack.expected_size
         stack_to_expand = stack_to_shrink = None
+
+        print(f"ESS: {exp_sell_size}, EBS: {exp_buy_size}")
         
         self.balance_size = 4
         if exp_buy_size <= self.balance_size:
@@ -358,6 +382,7 @@ class OrderManager:
         
         if stack_to_expand and stack_to_shrink:
             delta = int(size_diff // 2)
+            print(f"delta: {delta}")
             stack_to_expand.refill_orders(delta, direction="outer")
             stack_to_shrink.shrink_outer(delta)
 
@@ -463,17 +488,19 @@ class GridBot:
     def sync_order_status(self):
         order_ids = self.om.active_order_ids
         orders_data = self.exchange.check_order_status(order_ids=order_ids)
-        filled_count = 0
+        traded_count = 0
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
                 # Rmove the order from the active orders list
                 self.om.order_traded(order_id=order_data['order_id'])
-                filled_count += 1
+                traded_count += 1
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 print(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
 
-        if filled_count > 1:
-            print(f"More than 1 orders are eaten: [{filled_count}] orders")
+        self.om.print_stacks()
+
+        if traded_count > 1:
+            print(f"More than 1 orders are traded: [{traded_count}] orders")
         # Refill with new orders (create new orders in the opposite stack)
         data = self.exchange.get_latest_prices()
         mid_price = data['mid_price']
