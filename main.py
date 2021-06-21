@@ -123,7 +123,6 @@ class OrderStatus(Enum):
     Cancelled = 5
     
 
-
 class Order:
     def __init__(self, price, amount, id=None, couple_id=None, side=OrderSide.Buy, status=OrderStatus.ToCreate) -> None:
         self.id = id
@@ -134,7 +133,11 @@ class Order:
         self.status = status
     
     def mark_cancel(self):
-        self.status = OrderStatus.ToCancel
+        if self.status == OrderStatus.Created:
+            self.status = OrderStatus.ToCancel
+        elif self.status == OrderStatus.ToCreate:
+            print(f"This order is not created yet when being cancelled: {self}")
+            self.status = OrderStatus.Cancelled
     
     def create_ok(self):
         if self.status == OrderStatus.ToCreate:
@@ -284,14 +287,17 @@ class OrderManager:
         def expected_size(self):
             return len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created])) 
             
-    def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_size=1) -> None:
+    def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_threshold=1) -> None:
+        """ 
+            balance_threshold: balance the size of two stacks when the size of either stack is <= this threshold
+        """
         self.price_interval = price_interval
         self.unit_amount = unit_amount
         self.grid_num = grid_num
         self.order_limit = order_limit
         self.buy_stack = self.OrderStack(om=self, side = OrderSide.Buy)
         self.sell_stack = self.OrderStack(om=self, side = OrderSide.Sell)
-        self.balance_size = balance_size
+        self.balance_threshold = balance_threshold
     
     def init_stacks(self, init_price):
         self.buy_stack.prepare_init(init_price=init_price)
@@ -325,7 +331,7 @@ class OrderManager:
     
     def print_stacks(self):
         for o in [*reversed(self.sell_stack.active_orders), *self.buy_stack.active_orders]:
-            print(f"OID<{o.id}> {o.side.name} P[{o.price}]")
+            print(f"OID<{o.id}> {o.side.name} @[{o.price}]")
     
     def remove_all(self):
         print("TODO: save all orders into db")
@@ -361,20 +367,18 @@ class OrderManager:
         diff_sell =  self.sell_stack.best_order.price - mid_price
         refill_stack(diff_sell, self.sell_stack)
 
-        # return
-        # TODO: Balance the two stacks if needed
+    def blance_stacks(self):
         exp_buy_size = self.buy_stack.expected_size
         exp_sell_size = self.sell_stack.expected_size
         stack_to_expand = stack_to_shrink = None
 
         print(f"ESS: {exp_sell_size}, EBS: {exp_buy_size}")
         
-        self.balance_size = 4
-        if exp_buy_size <= self.balance_size:
+        if exp_buy_size <= self.balance_threshold:
             stack_to_expand = self.buy_stack
             stack_to_shrink = self.sell_stack
             size_diff =  exp_sell_size - exp_buy_size
-        elif exp_sell_size <= self.balance_size:
+        elif exp_sell_size <= self.balance_threshold:
             stack_to_expand = self.sell_stack
             stack_to_shrink = self.buy_stack
             size_diff = exp_buy_size - exp_sell_size
@@ -504,6 +508,7 @@ class GridBot:
         data = self.exchange.get_latest_prices()
         mid_price = data['mid_price']
         self.om.refill_orders(mid_price)
+        self.om.blance_stacks()
         self.commit_cancel_orders()
         self.commit_create_orders()
 
