@@ -254,7 +254,7 @@ class OrderManager:
             """ Prepare to remove `count` of the orders from the outer """
             if count <= 0:
                 return 
-            for o in self._orders[-count:-1]:
+            for o in self._orders[-count:]:
                 o.mark_cancel()
         
         def order_create_ok(self, order):
@@ -491,7 +491,7 @@ class GridBot:
         traded_count = 0
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
-                # Rmove the order from the active orders list
+                # Notify the order manager that the order is traded
                 self.om.order_traded(order_id=order_data['order_id'])
                 traded_count += 1
             elif self.exchange.is_order_cancelled(order_data=order_data):
