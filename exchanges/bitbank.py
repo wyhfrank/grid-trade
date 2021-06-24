@@ -1,4 +1,12 @@
 from enum import Enum
+import python_bitbankcc
+
+class ExceedOrderLimitError(Exception):
+    pass
+
+
+class InvalidPriceError(Exception):
+    pass
 
 
 class Exchange:
@@ -16,27 +24,24 @@ class Bitbank(Exchange):
         CancelledUnfilled = "CANCELED_UNFILLED"
         CancelledPartiallyFilled = "CANCELED_PARTIALLY_FILLED"
 
-    class ExceedOrderLimitError(Exception):
-        pass
-
-    class InvalidPriceError(Exception):
-        pass
-
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
         # TODO: DEBUG PURPOSE
         self.order_id = 1000
+        self.pub = python_bitbankcc.public()
     
     def get_latest_prices(self):
         """Get the latest price, best_ask, best_bid"""
-        info = {
-            "price": 0,
-            "best_ask": 0,
-            "best_bid": 0,
-            "spread": 0,
-            "mid_price": 115,
-        }
+        info = {}
+        res = self.pub.get_ticker(self.pair)
+        
+        info['price'] = float(res['last'])
+        info['best_ask'] = float(res['sell'])
+        info['best_bid'] = float(res['buy'])
+        info['spread'] = info['best_ask'] - info['best_bid']
+        info['mid_price'] = (info['best_ask'] + info['best_bid']) / 2
+        
         return info
     
     def get_my_orders():
@@ -103,3 +108,13 @@ class Bitbank(Exchange):
         print(f"Request to cancel order: {order}")
 
         return order
+
+
+def test_bitbank():
+    bb = Bitbank(pair='btc_jpy')
+    info = bb.get_latest_prices()
+    print(info)
+
+
+if __name__ == "__main__":
+    test_bitbank()
