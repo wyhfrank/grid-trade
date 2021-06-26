@@ -5,7 +5,7 @@ from exchanges import Exchange
 class GridBot:
 
     class Parameter:
-        def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price, support, grid_num) -> None:
+        def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price, support, grid_num, fee=0) -> None:
             self.unit_amount = unit_amount
             self.price_interval = price_interval
             self.init_base = init_base
@@ -13,6 +13,7 @@ class GridBot:
             self.init_price = init_price
             self.support = support
             self.grid_num = grid_num
+            self.fee = fee
         
         @property
         def lowest_price(self):
@@ -22,15 +23,15 @@ class GridBot:
         def half_grid_num(self):
             return self.grid_num // 2
 
-        def get_highest_earn_rate_per_grid(self, fee):
-            return self.price_interval / self.lowest_price - 2 * fee
+        def get_highest_earn_rate_per_grid(self):
+            return self.price_interval / self.lowest_price - 2 * self.fee
 
-        def get_lowest_earn_rate_per_grid(self, fee):
+        def get_lowest_earn_rate_per_grid(self):
             second_highest_price = self.init_price + (self.half_grid_num-1) * self.price_interval
-            return self.price_interval / second_highest_price - 2 * fee
+            return self.price_interval / second_highest_price - 2 * self.fee
 
         @classmethod
-        def calc_grid_params(cls, init_base, init_quote, init_price, support, grid_num=100, fee=-0.0002):
+        def calc_grid_params(cls, init_base, init_quote, init_price, support, grid_num=100, fee=0):
             """ Calculate the grid setup parameters
 
                 init_base: initial amount of base currency (e.g., BTC): 0.01
@@ -58,12 +59,17 @@ class GridBot:
                 unused_quote = init_quote - quote_needed
             
             param = cls(unit_amount=unit_amount, price_interval=price_interval, init_price=init_price,
-                        init_base=init_base, init_quote=init_quote, support=support, grid_num=grid_num)
+                        init_base=init_base, init_quote=init_quote, support=support, grid_num=grid_num, fee=fee)
             return param
 
         def __repr__(self) -> str:
             # attrs = ['unit_amount', 'price_interval']
-            return "<Param: {}>".format(", ".join([f"{k}[{v}]" for k, v in self.__dict__.items()]))
+            paris = {
+                **self.__dict__,
+                "highest_grid_earn_rate": self.get_highest_earn_rate_per_grid(),
+                "lowest_grid_earn_rate": self.get_lowest_earn_rate_per_grid(),
+            }
+            return "<Param: {}>".format(", ".join([f"{k}[{v}]" for k, v in paris.items()]))
 
     def __init__(self, exchange: Exchange) -> None:
         self.exchange = exchange
