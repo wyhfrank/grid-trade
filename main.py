@@ -22,8 +22,8 @@ def run_grid_bot():
     bot_config = config['grid_bot']
     pair = bot_config['pair']
     grid_num = bot_config['grid_num']
-    init_base = bot_config['init_base']
-    init_quote = bot_config['init_quote']
+    base_usage = bot_config['base_usage']
+    quote_usage = bot_config['quote_usage']
     price_interval = bot_config['price_interval']
     check_interval = bot_config['check_interval']
     order_limit = bot_config['order_limit']
@@ -36,10 +36,14 @@ def run_grid_bot():
         'pair': pair,
         'user': user,
         'exchange': ex.name,
-        'db': fsm,
+        'db': fsm,  # Comment this line out if you don't need to store data to db
     }
 
     init_price = ex.get_mid_price()
+    assets = ex.get_assets()
+    init_base = assets['base_amount'] * base_usage
+    init_quote = assets['quote_amount'] * quote_usage
+
     bot = GridBot(exchange=ex)
     param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
                                             price_interval=price_interval, grid_num=grid_num, fee=ex.fee)

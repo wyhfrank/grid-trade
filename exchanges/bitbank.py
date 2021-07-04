@@ -13,7 +13,7 @@ class Exchange:
     name = 'AbstractExchange'
     fee = 0
 
-    def __init__(self, pair, max_order_count=10, api_key=None, api_secret=None) -> None:
+    def __init__(self, pair: str, max_order_count=10, api_key=None, api_secret=None) -> None:
         self.max_order_count = max_order_count
         self.pair = pair
         self.api_key = api_key
@@ -39,6 +39,18 @@ class Exchange:
     def is_order_fullyfilled(cls, order_data):
         raise NotImplementedError()
     
+    def get_currency_name(self, part='base'):
+        pos = 0 if part=='base' else 1
+        return self.pair.split('_')[pos]
+
+    @property
+    def base_name(self):
+        return self.get_currency_name('base')
+
+    @property
+    def quote_name(self):
+        return self.get_currency_name('quote')
+
     def __repr__(self):
         return self.name
 
@@ -94,6 +106,18 @@ class Bitbank(Exchange):
     
     def get_mid_price(self):
         return self.get_latest_prices()['mid_price']
+
+    def parse_currency_amount(self, response, part='base'):
+        for asset in response['assets']:
+            if asset['asset'] == self.get_currency_name(part=part):
+                return float(asset['free_amount'])
+        return None
+    
+    def get_assets(self):
+        res = self.prv.get_asset()
+        base_amount = self.parse_currency_amount(response=res, part='base')
+        quote_amount = self.parse_currency_amount(response=res, part='quote')
+        return {'base_amount': base_amount, 'quote_amount': quote_amount}
 
     def create_order(self, order):
         if not order.pair == self.pair:
