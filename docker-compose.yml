@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+    bot:
+        image: gridbot
+        build:
+          context: .
+        container_name: gridbot
+        tty: true
+        volumes:
+          - ./configs:/app/configs
+        command: python main.py configs/config.yml
+
