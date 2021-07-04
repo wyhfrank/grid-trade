@@ -10,12 +10,63 @@ class InvalidPriceError(Exception):
 
 
 class Exchange:
-    def __init__(self, pair, max_order_count=10) -> None:
+    name = 'AbstractExchange'
+    fee = 0
+
+    def __init__(self, pair, max_order_count=10, api_key=None, api_secret=None) -> None:
         self.max_order_count = max_order_count
         self.pair = pair
+        self.api_key = api_key
+        self.api_secret = api_secret
+
+    def get_latest_prices(self):
+        raise NotImplementedError()
+
+    def create_order(self, order):
+        raise NotImplementedError()
+
+    def cancel_orders(self, order_ids):
+        raise NotImplementedError()    
+
+    def get_orders_data(self, order_ids):
+        raise NotImplementedError()
+
+    @classmethod
+    def is_order_cancelled(cls, order_data):
+        raise NotImplementedError()
+
+    @classmethod
+    def is_order_fullyfilled(cls, order_data):
+        raise NotImplementedError()
+    
+    def __repr__(self):
+        return self.name
 
 
 class Bitbank(Exchange):
+    '''
+    Format of order_data:
+    
+    "data": {
+            "order_id": 15609795801,
+            "pair": "btc_jpy",
+            "side": "sell",
+            "type": "limit",
+            "start_amount": "0.0005",
+            "remaining_amount": "0.0000",
+            "executed_amount": "0.0005",
+            "price": "3859000",
+            "average_price": "3859000",
+            "ordered_at": 1625324482979,
+            "status": "FULLY_FILLED",
+            "expire_at": 1640876482979,
+            "post_only": true
+        }
+    '''
+
+    name = 'bitbank'
+    fee = -0.002
+
     class OrderStatus(Enum):
         # UNFILLED, PARTIALLY_FILLED, FULLY_FILLED, CANCELED_UNFILLED, CANCELED_PARTIALLY_FILLED
         Unfilled = "UNFILLED"
@@ -26,10 +77,8 @@ class Bitbank(Exchange):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-
-        # TODO: DEBUG PURPOSE
-        self.order_id = 1000
         self.pub = python_bitbankcc.public()
+        self.prv = python_bitbankcc.private(api_key=self.api_key, api_secret=self.api_secret)
     
     def get_latest_prices(self):
         """Get the latest price, best_ask, best_bid"""
@@ -41,28 +90,60 @@ class Bitbank(Exchange):
         info['best_bid'] = float(res['buy'])
         info['spread'] = info['best_ask'] - info['best_bid']
         info['mid_price'] = (info['best_ask'] + info['best_bid']) / 2
-        
         return info
     
-    def get_my_orders():
-        orders = []
-        return orders
-    
-    def check_order_status(self, order_ids):
-        orders_data = []
-        # TODO: make request here
-        
-        orders_data = [
-            {
-                'order_id': 1005,
-                'status': self.OrderStatus.FullyFilled,
-            },
-            {
-                'order_id': 1000,
-                'status': self.OrderStatus.FullyFilled,
-            },
-        ]
+    def get_mid_price(self):
+        return self.get_latest_prices()['mid_price']
 
+    def create_order(self, order):
+        if not order.pair == self.pair:
+            print(f"Warning: new order pair ({order.pair}) is diff than exchange default pair ({self.pair})")
+        
+        # TODO: find a better way to convert these enum values
+        side_value = order.side.value
+        order_type_value = order.order_type.value
+
+        try:
+            order_data = self.prv.order(pair=order.pair, price=order.price, amount=order.amount, 
+                                side=side_value, order_type=order_type_value, post_only=order.post_only)
+        except Exception as e:
+            message = e.args[0] if e.args and len(e.args) > 0 else ''
+            # エラーコード: 60011 内容: 同時発注制限件数(30件)を上回っています
+            if '60011' in message:
+                raise ExceedOrderLimitError(message)
+            else:
+                raise e
+
+        # print("Response of create order:", order_data)
+
+        if self.is_order_cancelled(order_data=order_data):
+            raise self.InvalidPriceError()
+
+        fields_to_update = ['order_id', 'ordered_at']        
+        for field_key in fields_to_update:
+            setattr(order, field_key, order_data[field_key])
+        return order
+
+    def cancel_orders(self, order_ids):
+        if not order_ids:
+            return []
+        res = self.prv.cancel_orders(self.pair, order_ids=order_ids)
+        # print("Response of cancel order:", res)
+        orders_data = res['orders']
+        return orders_data
+
+    def get_active_orders_data(self):
+        res = self.prv.get_active_orders(self.pair)
+        # print("Response of get_active_orders_data:", res)
+        orders_data = res['orders']
+        return orders_data
+
+    def get_orders_data(self, order_ids):
+        if not order_ids:
+            return []
+        res = self.prv.get_orders_info(self.pair, order_ids=order_ids)
+        # print("Response of check_order_status:", res)
+        orders_data = res['orders']
         return orders_data
     
     @classmethod
@@ -76,45 +157,80 @@ class Bitbank(Exchange):
     @classmethod
     def is_order_fullyfilled(cls, order_data):
         try:
-            return order_data['status'] in [cls.OrderStatus.FullyFilled]
+            return order_data['status'] in [cls.OrderStatus.FullyFilled.value]
         except KeyError:
             return False
 
-    def create_order(self, order):
-        order_data = {}
-        # TODO: make request here
 
-        order_data = {
-            'order_id': self.order_id,
-        }
-        self.order_id += 1
-
-        print(f"Request to create order: {order}")
-        
-        if self.is_order_cancelled(order_data=order_data):
-            raise self.InvalidPriceError()
-        order.id = order_data['order_id']
-        return order
-
-    def cancel_order(self, order):
-        order_data = {}
-        # TODO: make request here
-
-        order_data = {
-            'order_id': 0,
-        }
-        
-        # order.id = order_data['order_id']
-        print(f"Request to cancel order: {order}")
-
-        return order
-
-
-def test_bitbank():
+def test_get_prices():
     bb = Bitbank(pair='btc_jpy')
     info = bb.get_latest_prices()
     print(info)
 
 
+def test_create_order():
+    import time
+    from grid_trade.orders import Order, OrderSide
+    from utils import read_config
+
+    config = read_config()
+    api_key = config['api']['key']
+    api_secret = config['api']['secret']
+    
+    pair = 'btc_jpy'
+    data = {
+        'price': 10000,
+        'pair': pair,
+        'amount': 0.001,
+        'side': OrderSide.Buy,
+    }
+    o = Order.from_dict(data)
+    print(o)
+    bb = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
+
+
+    for i in range(1, 33):
+        print(i)
+        bb.create_order(o)
+        time.sleep(0.1)
+
+    return
+    # print(o)
+    data['order_id'] = o.order_id
+    data['order_id'] = 15627933749
+
+    # bb.cancel_orders(order_ids=[data['order_id']])
+
+    orders_data = bb.get_orders_data(order_ids=[data['order_id']])
+
+    for od in orders_data:
+        is_cancelled = bb.is_order_cancelled(order_data=od)
+        print(f"is_cancelled: {is_cancelled}")
+        is_fullyfilled = bb.is_order_fullyfilled(order_data=od)
+        print(f"is_fullyfilled: {is_fullyfilled}")
+
+
+def test_cancel_all_orders():
+    from utils import read_config
+
+    config = read_config()
+    api_key = config['api']['key']
+    api_secret = config['api']['secret']
+    
+    pair = 'btc_jpy'
+    bb = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
+
+    orders_data = bb.get_active_orders_data()
+    order_ids = [od['order_id'] for od in orders_data]
+    bb.cancel_orders(order_ids=order_ids)
+
+
+def append_sys_path():
+    import sys
+    sys.path.append('.')
+
+
 if __name__ == "__main__":
-    test_bitbank()
+    append_sys_path()
+    # test_create_order()
+    test_cancel_all_orders()
