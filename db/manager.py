@@ -1,4 +1,4 @@
-from time import time
+import os
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -14,6 +14,9 @@ class DBManagerBase:
 
 class FireStoreManager(DBManagerBase):
     def __init__(self, config_file="configs/serviceAccountKey.json"):
+        if not os.path.exists(config_file):
+            print(f"Config file not exist: {config_file}")
+            return None
         cred = credentials.Certificate(config_file)
         firebase_admin.initialize_app(cred)
         self.db = firestore.client()
