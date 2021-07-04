@@ -27,6 +27,7 @@ def run_grid_bot():
     price_interval = bot_config['price_interval']
     check_interval = bot_config['check_interval']
     order_limit = bot_config['order_limit']
+    reset_interval_sec = bot_config['reset_interval'] * 60 * 60
 
     user = config['user']['name']
     
@@ -39,29 +40,37 @@ def run_grid_bot():
         'db': fsm,  # Comment this line out if you don't need to store data to db
     }
 
-    init_price = ex.get_mid_price()
-    assets = ex.get_assets()
-    init_base = assets['base_amount'] * base_usage
-    init_quote = assets['quote_amount'] * quote_usage
-
-    bot = GridBot(exchange=ex)
-    param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                            price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
-
-    print(f"Run with:", param)
-
-    bot.init_and_start(param=param, additional_info=additional_info)
     try:
         while True:
-            start = time.time()
-            bot.sync_order_status()
-            # bot.om.print_stacks()
+            init_price = ex.get_mid_price()
+            assets = ex.get_assets()
+            init_base = assets['base_amount'] * base_usage
+            init_quote = assets['quote_amount'] * quote_usage
 
-            elapsed = time.time() - start
-            to_sleep = check_interval - elapsed
-            if to_sleep > 0:
-                print(f"Sleep for: {to_sleep:.3f}s")
-                time.sleep(to_sleep)
+            bot = GridBot(exchange=ex)
+            param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
+                                                    price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
+
+            print(f"Run with:", param)
+
+            bot.init_and_start(param=param, additional_info=additional_info)
+            while True:
+                now = time.time()
+
+                if now - bot.started_at > reset_interval_sec:
+                    # Stop this bot and restart a new bot
+                    bot.cancel_and_stop()
+                    time.sleep(0.5)
+                    break
+
+                bot.sync_order_status()
+                # bot.om.print_stacks()
+
+                elapsed = time.time() - now
+                to_sleep = check_interval - elapsed
+                if to_sleep > 0:
+                    # print(f"Sleep for: {to_sleep:.3f}s")
+                    time.sleep(to_sleep)
     except KeyboardInterrupt:
         print(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
         bot.cancel_and_stop()

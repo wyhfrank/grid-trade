@@ -10,6 +10,7 @@ grid_bot:
   price_interval: 1000
   check_interval: 1 # Time between checking the update
   order_limit : 10
+  reset_interval: 12  # reset the bot in 12 hours
 
 user:
   name: YOUR_NAME_HERE
