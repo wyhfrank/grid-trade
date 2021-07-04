@@ -6,57 +6,62 @@
 4. Calculate statistics and send notifications: earn rate, yearly earn rate
 """
 
+import time
 from grid_trade import GridBot
 from exchanges import Bitbank
+from utils import read_config
+from db.manager import FireStoreManager
 
 
-def test_params():
-    init_price = 35393
-    init_quote = 50000
-    init_base = init_quote / init_price
-    support = 24756
-    grid_num = 100
+def run_grid_bot():
+    fsm = FireStoreManager()
+    config = read_config()
+    api_key = config['api']['key']
+    api_secret = config['api']['secret']
 
-    # init_price = 100
-    # init_quote = 700
-    # init_base = 10
-    # support = 50
-    # grid_num = 10
+    bot_config = config['grid_bot']
+    pair = bot_config['pair']
+    grid_num = bot_config['grid_num']
+    init_base = bot_config['init_base']
+    init_quote = bot_config['init_quote']
+    price_interval = bot_config['price_interval']
+    check_interval = bot_config['check_interval']
+    order_limit = bot_config['order_limit']
 
-    for gn in [10, 20, 30, 50, 80 , 100]:
-        grid_num = gn
-        params = GridBot.Parameter.calc_grid_params(init_base, init_quote, init_price, support, grid_num=grid_num, fee=0.0008)
-        print(params)
+    user = config['user']['name']
+    
+    ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret, max_order_count=order_limit)
 
-def test_bot():
-    pair = 'eth_jpy'
+    additional_info = {
+        'pair': pair,
+        'user': user,
+        'exchange': ex.name,
+        'db': fsm,
+    }
 
-    init_price = 35393
-    init_quote = 50000
-    init_base = init_quote / init_price
-    support = 24756
-    fee = -0.0002
-    grid_num = 100
+    init_price = ex.get_mid_price()
+    bot = GridBot(exchange=ex)
+    param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
+                                            price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
 
-    init_price = 100
-    init_quote = 700
-    init_base = 10
-    support = 50
-    grid_num = 10    
+    print(f"Run with:", param)
 
-    param = GridBot.Parameter.calc_grid_params(init_base, init_quote, init_price, support, grid_num=grid_num, fee=fee)
+    bot.init_and_start(param=param, additional_info=additional_info)
+    try:
+        while True:
+            start = time.time()
+            bot.sync_order_status()
+            # bot.om.print_stacks()
 
-    bitbank = Bitbank(pair=pair)
-    bot = GridBot(bitbank)
-    bot.init_grid(param=param)
-
-    # print(bot.om.active_orders)
-    bot.om.print_stacks()
-
-    bot.sync_order_status()
-    bot.om.print_stacks()
+            elapsed = time.time() - start
+            to_sleep = check_interval - elapsed
+            if to_sleep > 0:
+                print(f"Sleep for: {to_sleep:.3f}s")
+                time.sleep(to_sleep)
+    except KeyboardInterrupt:
+        print(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
+        bot.cancel_and_stop()
 
 
 if __name__ == "__main__":
-    # test_params()
-    test_bot()
+    run_grid_bot()

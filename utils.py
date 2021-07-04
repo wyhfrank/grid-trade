@@ -8,7 +8,7 @@ async def make_async(func, *args):
     return res
 
 
-def read_config(fn='./config.yml'):
+def read_config(fn='./configs/config.yml'):
     config = None
     with open(fn, 'r') as f:
         config = yaml.safe_load(f)
