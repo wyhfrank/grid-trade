@@ -4,5 +4,5 @@ env/
 configs/
 __pycache__/
 nohup.out
-.DS_Store
+.pytest_cache/
 data/
