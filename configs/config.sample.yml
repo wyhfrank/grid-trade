@@ -1,0 +1,15 @@
+api:
+  key: YOUR_API_KEY
+  secret: YOUR_API_SECRET
+
+grid_bot:
+  pair: eth_jpy  # In the form of base_quote
+  grid_num: 100
+  base_usage: 0.8  #  The ratio of base currency (eth) to use
+  quote_usage: 0.8  # The ratio of quote currency (jpy) to use
+  price_interval: 1000
+  check_interval: 1 # Time between checking the update
+  order_limit : 10
+
+user:
+  name: YOUR_NAME_HERE
