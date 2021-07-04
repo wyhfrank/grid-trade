@@ -1,5 +1,9 @@
-## How to build
+## Get Started
 
 ``` sh
-docker build . -t gridbot
+# Build the docker image
+make build
+
+# Run the image
+make run
 ```
