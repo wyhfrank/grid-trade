@@ -14,7 +14,11 @@ from db.manager import FireStoreManager
 
 
 def run_grid_bot():
-    fsm = FireStoreManager()
+    fsm = None
+    try:
+        fsm = FireStoreManager()
+    except ValueError as e:
+        print("FireStoreManager cannot be initialized due to: ", e)
     config = read_config()
     api_key = config['api']['key']
     api_secret = config['api']['secret']
