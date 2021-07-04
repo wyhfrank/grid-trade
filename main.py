@@ -6,6 +6,7 @@
 4. Calculate statistics and send notifications: earn rate, yearly earn rate
 """
 
+import sys
 import time
 from grid_trade import GridBot
 from exchanges import Bitbank
@@ -13,13 +14,20 @@ from utils import read_config
 from db.manager import FireStoreManager
 
 
-def run_grid_bot():
+def main():
+    if len(sys.argv) > 1:
+        config_file = sys.argv[1]
+    else:
+        config_file = './configs/config.yml'
+    run_grid_bot(config_file)
+
+def run_grid_bot(config_file):
     fsm = None
     try:
         fsm = FireStoreManager()
     except ValueError as e:
         print("FireStoreManager cannot be initialized due to: ", e)
-    config = read_config()
+    config = read_config(fn=config_file)
     api_key = config['api']['key']
     api_secret = config['api']['secret']
 
@@ -78,7 +86,10 @@ def run_grid_bot():
     except KeyboardInterrupt:
         print(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
         bot.cancel_and_stop()
+    except Exception as e:
+        print(f"Unknown error: ", e)
+        bot.cancel_and_stop()
 
 
 if __name__ == "__main__":
-    run_grid_bot()
+    main()
