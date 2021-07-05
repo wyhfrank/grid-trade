@@ -1,4 +1,5 @@
 import sys
+from typing import Iterable
 sys.path.append('.')
 
 import time
@@ -183,6 +184,7 @@ class GridBot:
         self.status = status
         self.started_at = started_at
         self.stopped_at = stopped_at
+        self.latest_price = None
         self.traded_count = defaultdict(int)
 
     #################
@@ -247,6 +249,7 @@ class GridBot:
         if traded_count > 1:
             self.notify_error(f"More than 1 orders are traded: [{traded_count}] orders")
         mid_price = self.exchange.get_mid_price()
+        self.latest_price = mid_price
         if mid_price > self.param.highest_price or mid_price < self.param.lowest_price:
             # TODO: notify user
             return False
@@ -257,7 +260,7 @@ class GridBot:
         self._commit_cancel_orders()
         self._commit_create_orders()
         # self.om.print_stacks()
-        self.update_bot_info_to_db()
+        self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
 
     #################
     # DB related
@@ -269,9 +272,9 @@ class GridBot:
         if self.db:
             self.db.create_and_use_runner(self.to_dict())
 
-    def update_bot_info_to_db(self):
+    def update_bot_info_to_db(self, fields=None):
         if self.db:
-            self.db.update_runner(runner_id=self.uid, runner_data=self.to_dict())
+            self.db.update_runner(runner_id=self.uid, runner_data=self.to_dict(fields=fields))
 
     @property
     def db(self):
@@ -340,17 +343,24 @@ class GridBot:
     
     #################
     # Serialization
-    def get_dict_to_serialize(self):
+    def get_dict_to_serialize(self, fields=None):
         dest = {
             'uid': self.uid,
             'name': 'grid_bot',
             'started_at': self.started_at,
             'stopped_at': self.stopped_at,
+            'latest_price': self.latest_price,
             'status': self.status,
             'traded_count': self.traded_count,
             'param': self.param.to_dict(),
         }
-        return dest
+        if fields and isinstance(fields, Iterable):
+            res = {}
+            for f in fields:
+                res[f] = dest[f]
+        else:
+            res = dest
+        return res
 
     @classmethod
     def from_dict(cls, source):
@@ -368,8 +378,8 @@ class GridBot:
                 data[key] = enum_type(data[key])
         return cls(param=param, **data)
 
-    def to_dict(self):
-        dest = self.get_dict_to_serialize()
+    def to_dict(self, fields=None):
+        dest = self.get_dict_to_serialize(fields=fields)
         for key in self.enum_values.keys():
             # dest[key] = getattr(self, key).value
             dest[key] = dest[key].value
