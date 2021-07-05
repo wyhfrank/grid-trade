@@ -229,12 +229,10 @@ class GridBot:
             return None
     
     def notify_info(self, message):
-        print(message)
         if self.notifier:
             self.notifier.info(message)
 
     def notify_error(self, message):
-        print(message)
         if self.notifier:
             self.notifier.error(message)
 
