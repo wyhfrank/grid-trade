@@ -1,5 +1,9 @@
-from enum import Enum
+import sys
+sys.path.append('.')
+
 import logging
+from enum import Enum
+from utils import init_formatted_properties
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +35,12 @@ class Order:
         'status': OrderStatus,
         'order_type': OrderType,
     }
+    # A new property of `NAME_s` will be added for each of the `NAME` variables
+    fields_to_format = {
+        'amount': {},
+        'price': {'precision': 1},
+        'average_price': {'precision': 1},
+    }    
 
     def __init__(self, price, amount, pair, order_type=OrderType.Limit, order_id=None, couple_id=None, 
                 side=OrderSide.Buy, average_price=0, status=OrderStatus.ToCreate, 
@@ -141,7 +151,7 @@ class Order:
     
     @property
     def short_markdown(self) -> str:
-        return f"{self.user} {self.side.value} {self.amount} {self.pair} @ **{self.price}**"
+        return f"{self.user} {self.side.value} {self.amount_s} {self.pair} @ **{self.price_s}**"
 
 
 class OrderManager:
@@ -406,6 +416,12 @@ class OrderManager:
             stack_to_shrink.shrink_outer(delta)
 
 
+init_formatted_properties(Order, Order.fields_to_format)
+
+
+
+######################
+# Tests
 def test_order():
     data = {
         'price': 10000,
@@ -419,6 +435,8 @@ def test_order():
     print(o1==o2)
     print(o1)
     print(o2)
+
+    print(o1.short_markdown)
 
 
 
