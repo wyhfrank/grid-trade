@@ -123,6 +123,18 @@ class FireStoreManager(DBManagerBase):
             }
         }
         return self.update_runner(runner_id=uid, **data)
+    
+    def _test_default_dict(self):
+        from collections import defaultdict
+        
+        runner_data = {
+            'f1': defaultdict(int)
+        }
+        runner_data['f1']['buy'] += 1
+        print(runner_data)
+        runner_ref = self.db.collection(u'tests').document()
+        runner_ref.set(runner_data)
+
 
 
 def test():
@@ -147,7 +159,12 @@ def test_runner():
     time.sleep(3)
     m._test_update_runner()
 
+def test_default_dict():
+    m = FireStoreManager()
+    m._test_default_dict()
+
 
 if __name__ == "__main__":
     # test()
-    test_runner()
+    # test_runner()
+    test_default_dict()

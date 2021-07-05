@@ -4,6 +4,7 @@ sys.path.append('.')
 import time
 import uuid
 from enum import Enum
+from collections import defaultdict
 from grid_trade.orders import OrderManager
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
@@ -140,6 +141,7 @@ class GridBot:
         self.status = status
         self.started_at = started_at
         self.stopped_at = stopped_at
+        self.traded_count = defaultdict(int)
 
     def init_and_start(self, param, additional_info):
         """ Init the order manager and start the bot """
@@ -177,10 +179,13 @@ class GridBot:
         traded_count = 0
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
+                oid = order_data['order_id']
                 print(f"order traded: {order_data}")
                 # Notify the order manager that the order is traded
-                self.om.order_traded(order_id=order_data['order_id'])
+                self.om.order_traded(order_id=oid)
                 traded_count += 1
+                order = self.om.get_order_by_id(order_id=oid)
+                self.traded_count[order.side.value] += 1
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 print(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
 
@@ -199,6 +204,7 @@ class GridBot:
         self._commit_cancel_orders()
         self._commit_create_orders()
         # self.om.print_stacks()
+        self.update_bot_info_to_db()
 
     # TODO: add method to recover from db
     def recover_from_db(self):
@@ -245,19 +251,21 @@ class GridBot:
             'started_at': self.started_at,
             'stopped_at': self.stopped_at,
             'status': self.status,
+            'traded_count': self.traded_count,
             'param': self.param.to_dict(),
         }
         return dest
 
     @classmethod
     def from_dict(cls, source):
-        # raise NotImplementedError('Not tested yet.')
+        raise NotImplementedError('Not tested yet.')
         param = cls.Parameter.from_dict(source['param'])
         data = {
             'uid': source['uid'],
             'started_at': source['started_at'],
             'stopped_at': source['stopped_at'],
             'status': source['status'],
+            'traded_count': source['traded_count']
         }
         for key, enum_type in cls.enum_values.items():
             if key in data and not isinstance(data[key], enum_type):
