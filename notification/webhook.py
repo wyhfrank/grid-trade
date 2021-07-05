@@ -43,6 +43,7 @@ class Discord:
         _, _, tb = sys.exc_info()
         if not tb:
             return ""
+        # https://docs.python.org/3/library/traceback.html#traceback.format_tb
         lines = traceback.format_tb(tb)
         tb_str = "".join(lines).strip()
         # Code block im markdown format
