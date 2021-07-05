@@ -14,5 +14,6 @@ make run
 
 ## TODO
 
+- [ ] Reset the bot only when price changed over a certain degree
 - [ ] Calculate earn rate
 - [x] Discord notification

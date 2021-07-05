@@ -8,6 +8,7 @@ from collections import defaultdict
 from grid_trade.orders import Order, OrderManager, OrderSide
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
+from utils import init_formatted_properties
 
 
 class BotStatus(Enum):
@@ -23,14 +24,30 @@ class GridBot:
     }
 
     class Parameter:
+        # A new property of `NAME_s` will be added for each of the `NAME` variables
+        fields_to_format = {
+            'unit_amount': {},
+            'init_base': {},
+            'init_quote': {'precision': 1},
+            'init_price': {'precision': 1},
+            'price_interval': {'precision': 1},
+            'unused_base': {},
+            'unused_quote': {'precision': 1},
+            'lowest_price': {'precision': 1},
+            'highest_price': {'precision': 1},
+            'lowest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
+            'highest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
+        }
+        precision = 5 # Fix the precision for all float values
         def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price,
-                    grid_num, fee=0, unused_base = 0, unused_quote = 0) -> None:
+                    grid_num, pair=None, fee=0, unused_base = 0, unused_quote = 0) -> None:
             self.unit_amount = unit_amount
             self.price_interval = price_interval
             self.init_base = init_base
             self.init_quote = init_quote
             self.init_price = init_price
             self.grid_num = grid_num
+            self.pair = pair
             self.fee = fee
             self.unused_base = unused_base
             self.unused_quote = unused_quote
@@ -57,9 +74,9 @@ class GridBot:
         def lowest_earn_rate_per_grid(self):
             second_highest_price = self.init_price + (self.half_grid_num-1) * self.price_interval
             return self.price_interval / second_highest_price - 2 * self.fee
-
+        
         @classmethod
-        def calc_grid_params_by_support(cls, init_base, init_quote, init_price, support, grid_num=100, fee=0):
+        def calc_grid_params_by_support(cls, init_base, init_quote, init_price, support, grid_num=100, pair=None, fee=0):
             """ Calculate the grid setup parameters by fixing the support line
 
                 init_base: initial amount of base currency (e.g., BTC): 0.01
@@ -76,7 +93,7 @@ class GridBot:
                                             price_interval=price_interval, grid_num=grid_num, fee=fee)
 
         @classmethod
-        def calc_grid_params_by_interval(cls, init_base, init_quote, init_price, price_interval, grid_num=100, fee=0):
+        def calc_grid_params_by_interval(cls, init_base, init_quote, init_price, price_interval, grid_num=100, pair=None, fee=0):
             """ Calculate the grid setup parameters by fixing the price_interval
 
                 init_base: initial amount of base currency (e.g., BTC): 0.01
@@ -103,10 +120,12 @@ class GridBot:
                 unused_quote = init_quote - quote_needed
             
             param = cls(unit_amount=unit_amount, price_interval=price_interval, init_price=init_price,
-                        init_base=init_base, init_quote=init_quote, grid_num=grid_num, fee=fee,
+                        init_base=init_base, init_quote=init_quote, grid_num=grid_num, pair=pair, fee=fee,
                         unused_base=unused_base, unused_quote=unused_quote)
             return param   
-            
+
+        #############################
+        # Serialiazation
         def get_dict_to_serialize(self):
             dest = vars(self).copy()
             return dest
@@ -133,14 +152,14 @@ class GridBot:
 
         def get_full_markdown_list(self) -> list:
             return [
-                f"Grid Number: \t{self.grid_num}",
-                f"Unit Amount: \t{self.unit_amount}",
-                f"Price Interval: \t{self.price_interval}",
-                f"Init Price: \t{self.init_price}",
-                f"Init Currency: \t[{self.init_base} | {self.init_quote}]",
-                f"Unused Currency: \t[{self.unused_base} | {self.unused_quote}]",
-                f"Price Range: \t[{self.lowest_price} ~ {self.highest_price}]",
-                f"Earn Rate: \t[{self.lowest_earn_rate_per_grid} ~ {self.highest_earn_rate_per_grid}]",
+                f"Grid Number:     {self.grid_num}",
+                f"Unit Amount:     {self.unit_amount_s}",
+                f"Price Interval:  {self.price_interval_s}",
+                f"Init Price:      {self.init_price_s}",
+                f"Init Currency:   [{self.init_base_s} | {self.init_quote_s}]",
+                f"Unused Currency: [{self.unused_base_s} | {self.unused_quote_s}]",
+                f"Price Range:     [{self.lowest_price_s} ~ {self.highest_price_s}]",
+                f"Earn Rate:       [{self.lowest_earn_rate_per_grid_s} ~ {self.highest_earn_rate_per_grid_s}]",
             ]
         
         @property
@@ -150,7 +169,7 @@ class GridBot:
         @property
         def short_markdown(self) -> str:
             return ", ".join(self.get_full_markdown_list()[0:3])
-        
+
     def __init__(self, exchange: Exchange = None, param=None, status=BotStatus.Created, 
                 started_at=None, stopped_at=None, uid=None) -> None:
         if not uid:
@@ -299,7 +318,7 @@ class GridBot:
     # Private methods
     def _commit_cancel_orders(self):
         if len(self.om.orders_to_cancel) <= 0:
-            print('Nothing to cancel')
+            # print('Nothing to cancel')
             return
         order_ids = [o.order_id for o in self.om.orders_to_cancel]
         try:
@@ -355,9 +374,27 @@ class GridBot:
             dest[key] = dest[key].value
         return dest  
 
+init_formatted_properties(GridBot.Parameter, GridBot.Parameter.fields_to_format)
+
 
 ###################
 # Tests
+###################
+def test_param():
+    price_interval=5000.123456
+    grid_num=100
+    init_base = 0.123456
+    init_quote = 90000.123456
+    init_price = 257000.123456
+    fee = -0.002
+    pair = None
+    param = GridBot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
+                                            price_interval=price_interval, grid_num=grid_num, pair=pair, fee=fee)
+
+    print(param.full_markdown)
+    print(param.short_markdown)
+
+
 def test_gridbot():
     import sys
     sys.path.append('.')
@@ -392,7 +429,7 @@ def test_gridbot():
     init_price = ex.get_mid_price()
     bot = GridBot(exchange=ex)
     param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                            price_interval=price_interval, grid_num=grid_num, fee=fee)
+                                            price_interval=price_interval, grid_num=grid_num, pair=pair, fee=fee)
 
     print(param)
 
@@ -434,5 +471,6 @@ def test_serialization():
     # print(bot1.to_dict())
 
 if __name__ == '__main__':
-    test_serialization()
+    test_param()
+    # test_serialization()
     # test_gridbot()
