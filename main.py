@@ -10,12 +10,14 @@
 import sys
 import time
 import requests
+import logging
 from grid_trade import GridBot
 from exchanges import Bitbank
 from utils import read_config
 from db.manager import FireStoreManager
 from notification import Discord
 
+logger = logging.getLogger(__name__)
 
 def main():
     if len(sys.argv) > 1:
@@ -29,7 +31,7 @@ def run_grid_bot(config_file):
     try:
         fsm = FireStoreManager()
     except ValueError as e:
-        print("FireStoreManager cannot be initialized due to: ", e)
+        logger.error("FireStoreManager cannot be initialized due to: ", e)
     config = read_config(fn=config_file)
     api_key = config['api']['key']
     api_secret = config['api']['secret']
@@ -69,7 +71,7 @@ def run_grid_bot(config_file):
 
             bot = GridBot(exchange=ex)
             param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                                    price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
+                                                    price_interval=price_interval, grid_num=grid_num, pair=pair, fee=ex.fee)
 
             bot.init_and_start(param=param, additional_info=additional_info)
             while True:
@@ -89,15 +91,17 @@ def run_grid_bot(config_file):
                 elapsed = time.time() - now
                 to_sleep = check_interval - elapsed
                 if to_sleep > 0:
-                    # print(f"Sleep for: {to_sleep:.3f}s")
+                    logger.debug(f"Sleep for: {to_sleep:.3f}s")
                     time.sleep(to_sleep)
     except KeyboardInterrupt:
-        print(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
-        bot.cancel_and_stop()
+        logger.info(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
     except Exception as e:
         msg = f"Unknown error stopping the bot: {e}"
         discord.error(msg)
-        bot.cancel_and_stop()
+    finally:
+        if bot:
+            bot.cancel_and_stop()
+
 
 
 if __name__ == "__main__":
