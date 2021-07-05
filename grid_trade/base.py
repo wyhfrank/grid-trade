@@ -39,6 +39,7 @@ class GridBot:
             'highest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
         }
         precision = 5 # Fix the precision for all float values
+
         def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price,
                     grid_num, pair=None, fee=0, unused_base = 0, unused_quote = 0) -> None:
             self.unit_amount = unit_amount
@@ -197,7 +198,7 @@ class GridBot:
         self.additional_info = additional_info
         self.status = BotStatus.Running
         self.save_bot_info_to_db()
-        self.notify_info(f"GridBot ({self.uid}) starting with param:\n```\n{self.param.full_markdown}\n```")
+        self.notify_info(f"GridBot (`{self.uid}`) starting with param:\n```\n{self.param.full_markdown}\n```")
         self.om = OrderManager(price_interval=param.price_interval,
                                 unit_amount=param.unit_amount,
                                 grid_num=param.grid_num,
@@ -218,7 +219,7 @@ class GridBot:
         self.stopped_at = time.time()        
         self.status = BotStatus.Stopped
         self.update_bot_info_to_db()
-        self.notify_info(f"GridBot ({self.uid}) stopped.")
+        self.notify_info(f"GridBot (`{self.uid}`) stopped.")
     
     def sync_order_status(self):
         order_ids = self.om.active_order_ids
