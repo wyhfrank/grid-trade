@@ -6,12 +6,14 @@
 4. Calculate statistics and send notifications: earn rate, yearly earn rate
 """
 
+
 import sys
 import time
 from grid_trade import GridBot
 from exchanges import Bitbank
 from utils import read_config
 from db.manager import FireStoreManager
+from notification import Discord
 
 
 def main():
@@ -42,6 +44,10 @@ def run_grid_bot(config_file):
     reset_interval_sec = bot_config['reset_interval'] * 60 * 60
 
     user = config['user']['name']
+
+    discord_info_webhook = config['discord']['info']
+    discord_error_webhook = config['discord']['error']
+    discord = Discord(info_webhook=discord_info_webhook, err_webhook=discord_error_webhook)
     
     ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret, max_order_count=order_limit)
 
@@ -50,6 +56,7 @@ def run_grid_bot(config_file):
         'user': user,
         'exchange': ex.name,
         'db': fsm,  # Comment this line out if you don't need to store data to db
+        'notifier': discord,
     }
 
     try:
@@ -64,6 +71,7 @@ def run_grid_bot(config_file):
                                                     price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
 
             print(f"Run with:", param)
+            discord.info(f"Run with: {param}")
 
             bot.init_and_start(param=param, additional_info=additional_info)
             while True:
@@ -87,8 +95,9 @@ def run_grid_bot(config_file):
         print(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
         bot.cancel_and_stop()
     except Exception as e:
-        print(f"Unknown error: ", e)
         bot.cancel_and_stop()
+        print(f"Unknown error: {e}")
+        discord.error(f"Unknown error: {e}")
 
 
 if __name__ == "__main__":

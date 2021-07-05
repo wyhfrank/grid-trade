@@ -142,16 +142,18 @@ class GridBot:
         self.started_at = started_at
         self.stopped_at = stopped_at
         self.traded_count = defaultdict(int)
+        self.notifier = None
 
     def init_and_start(self, param, additional_info):
         """ Init the order manager and start the bot """
         if self.om:
-            print("The grid trade bot is already initiated. Skip.")
+            self.notify_error("The grid trade bot is already initiated. Skip.")
             return
 
         self.started_at = time.time()
         self.param = param
         self.additional_info = additional_info
+        self.notifier = additional_info.get('notifier', None)
         self.status = BotStatus.Running
         self.save_bot_info_to_db()
         self.om = OrderManager(price_interval=param.price_interval,
@@ -180,19 +182,19 @@ class GridBot:
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
                 oid = order_data['order_id']
-                print(f"order traded: {order_data}")
                 # Notify the order manager that the order is traded
                 self.om.order_traded(order_id=oid)
                 traded_count += 1
                 order = self.om.get_order_by_id(order_id=oid)
                 self.traded_count[order.side.value] += 1
+                self.notify_info(f"Order traded: {order}. Counter:{self.traded_count}")
             elif self.exchange.is_order_cancelled(order_data=order_data):
-                print(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
+                self.notify_error(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
 
         if traded_count <= 0:
             return
         if traded_count > 1:
-            print(f"More than 1 orders are traded: [{traded_count}] orders")
+            self.notify_error(f"More than 1 orders are traded: [{traded_count}] orders")
         mid_price = self.exchange.get_mid_price()
         if mid_price > self.param.highest_price or mid_price < self.param.lowest_price:
             # TODO: notify user
@@ -225,7 +227,16 @@ class GridBot:
             return db
         except Exception:
             return None
+    
+    def notify_info(self, message):
+        print(message)
+        if self.notifier:
+            self.notifier.info(message)
 
+    def notify_error(self, message):
+        print(message)
+        if self.notifier:
+            self.notifier.error(message)
 
     def _commit_cancel_orders(self):
         if len(self.om.orders_to_cancel) <= 0:

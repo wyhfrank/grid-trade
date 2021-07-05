@@ -13,4 +13,8 @@ grid_bot:
   reset_interval: 12  # reset the bot in 12 hours
 
 user:
-  name: YOUR_NAME_HERE
+  name: YOUR_NAME
+
+discord:
+  info: YOUR_INFO_WEBHOOK
+  error: YOUR_ERR_WEBHOOK
