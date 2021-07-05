@@ -164,7 +164,6 @@ class GridBot:
         self.started_at = started_at
         self.stopped_at = stopped_at
         self.traded_count = defaultdict(int)
-        self.notifier = None
 
     #################
     # Core logic
