@@ -49,10 +49,12 @@ class GridBot:
         def half_grid_num(self):
             return self.grid_num // 2
 
-        def get_highest_earn_rate_per_grid(self):
+        @property
+        def highest_earn_rate_per_grid(self):
             return self.price_interval / self.lowest_price - 2 * self.fee
 
-        def get_lowest_earn_rate_per_grid(self):
+        @property
+        def lowest_earn_rate_per_grid(self):
             second_highest_price = self.init_price + (self.half_grid_num-1) * self.price_interval
             return self.price_interval / second_highest_price - 2 * self.fee
 
@@ -123,12 +125,32 @@ class GridBot:
                 **self.__dict__,
                 "lowest_price": self.lowest_price,
                 "highest_price": self.highest_price,
-                "lowest_grid_earn_rate": self.get_lowest_earn_rate_per_grid(),
-                "highest_grid_earn_rate": self.get_highest_earn_rate_per_grid(),
+                "lowest_earn_rate_per_grid": self.lowest_earn_rate_per_grid,
+                "highest_earn_rate_per_grid": self.highest_earn_rate_per_grid,
             }
             variables = [f"{k}={v}" for k, v in paris.items()]
             return "{0}({1})".format(self.__class__.__name__, ", ".join(variables))
 
+        def get_full_markdown_list(self) -> list:
+            return [
+                f"Grid Number: \t{self.grid_num}",
+                f"Unit Amount: \t{self.unit_amount}",
+                f"Price Interval: \t{self.price_interval}",
+                f"Init Price: \t{self.init_price}",
+                f"Init Currency: \t[{self.init_base} | {self.init_quote}]",
+                f"Unused Currency: \t[{self.unused_base} | {self.unused_quote}]",
+                f"Price Range: \t[{self.lowest_price} ~ {self.highest_price}]",
+                f"Earn Rate: \t[{self.lowest_earn_rate_per_grid} ~ {self.highest_earn_rate_per_grid}]",
+            ]
+        
+        @property
+        def full_markdown(self) -> str:
+            return "\n".join(self.get_full_markdown_list())
+        
+        @property
+        def short_markdown(self) -> str:
+            return ", ".join(self.get_full_markdown_list()[0:3])
+        
     def __init__(self, exchange: Exchange = None, param=None, status=BotStatus.Created, 
                 started_at=None, stopped_at=None, uid=None) -> None:
         if not uid:
@@ -157,6 +179,7 @@ class GridBot:
         self.additional_info = additional_info
         self.status = BotStatus.Running
         self.save_bot_info_to_db()
+        self.notify_info(f"GridBot ({self.uid}) starting with param:\n```\n{self.param.full_markdown}\n```")
         self.om = OrderManager(price_interval=param.price_interval,
                                 unit_amount=param.unit_amount,
                                 grid_num=param.grid_num,
@@ -177,6 +200,7 @@ class GridBot:
         self.stopped_at = time.time()        
         self.status = BotStatus.Stopped
         self.update_bot_info_to_db()
+        self.notify_info(f"GridBot ({self.uid}) stopped.")
     
     def sync_order_status(self):
         order_ids = self.om.active_order_ids

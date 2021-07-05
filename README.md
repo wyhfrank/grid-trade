@@ -11,3 +11,8 @@ make build
 # Run the image
 make run
 ```
+
+## TODO
+
+- [ ] Calculate earn rate
+- [x] Discord notification

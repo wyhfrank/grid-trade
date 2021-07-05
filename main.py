@@ -71,8 +71,6 @@ def run_grid_bot(config_file):
             param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
                                                     price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
 
-            discord.info(f"Run with: {param}")
-
             bot.init_and_start(param=param, additional_info=additional_info)
             while True:
                 now = time.time()
@@ -97,9 +95,9 @@ def run_grid_bot(config_file):
         print(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
         bot.cancel_and_stop()
     except Exception as e:
-        bot.cancel_and_stop()
         msg = f"Unknown error stopping the bot: {e}"
         discord.error(msg)
+        bot.cancel_and_stop()
 
 
 if __name__ == "__main__":
