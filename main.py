@@ -71,7 +71,7 @@ def run_grid_bot(config_file):
 
             bot = GridBot(exchange=ex)
             param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                                    price_interval=price_interval, grid_num=grid_num, pair=pair, fee=ex.fee)
+                                                    price_interval=price_interval, grid_num=grid_num, fee=ex.fee)
 
             bot.init_and_start(param=param, additional_info=additional_info)
             while True:
