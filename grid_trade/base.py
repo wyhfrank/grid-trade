@@ -155,7 +155,6 @@ class GridBot:
         self.started_at = time.time()
         self.param = param
         self.additional_info = additional_info
-        self.notifier = additional_info.get('notifier', None)
         self.status = BotStatus.Running
         self.save_bot_info_to_db()
         self.om = OrderManager(price_interval=param.price_interval,
@@ -170,7 +169,10 @@ class GridBot:
     def cancel_and_stop(self):
         """ Cancel all orders and stop the bot. """
         order_ids = self.om.active_order_ids
-        self.exchange.cancel_orders(order_ids)
+        try:
+            self.exchange.cancel_orders(order_ids)
+        except Exception as e:
+            self.notify_error(f"Cancel orders failed for {self.exchange}. Plesase check manually!")
         self.om.cancel_all()
         self.stopped_at = time.time()        
         self.status = BotStatus.Stopped
@@ -231,7 +233,7 @@ class GridBot:
     @property
     def db(self):
         try:
-            db = self.additional_info['db']
+            db = self.additional_info.get('db', None)
             return db
         except Exception:
             return None
@@ -251,6 +253,14 @@ class GridBot:
             side = 'buy' if order.side==OrderSide.Buy else 'sell'
             message = self.format_order_traded(order=order, traded_count=self.traded_count)
             self.notifier.send_trade_msg(message, side)
+
+    @property
+    def notifier(self):
+        try:
+            notifier = self.additional_info.get('notifier', None)
+            return notifier
+        except Exception:
+            return None
 
     @classmethod
     def format_order_traded(cls, order: Order, traded_count: dict):
