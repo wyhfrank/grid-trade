@@ -1,9 +1,9 @@
 import sys
-from typing import Iterable
 sys.path.append('.')
 
 import time
 import uuid
+from typing import Iterable
 from enum import Enum
 from collections import defaultdict
 from grid_trade.orders import Order, OrderManager, OrderSide
@@ -39,7 +39,6 @@ class GridBot:
             'lowest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
             'highest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
         }
-        precision = 5 # Fix the precision for all float values
 
         def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price,
                     grid_num, pair=None, fee=0, unused_base = 0, unused_quote = 0) -> None:
@@ -259,7 +258,8 @@ class GridBot:
         mid_price = self.exchange.get_mid_price()
         self.latest_price = mid_price
         if mid_price > self.param.highest_price or mid_price < self.param.lowest_price:
-            # TODO: notify user
+            # self.notify_error(f"Current price (`{mid_price}`) exceeds price range: " + \
+                            #   f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
             return False
 
         # Refill with new orders (create new orders in the opposite stack)
@@ -392,6 +392,7 @@ class GridBot:
             if key in dest:
                 dest[key] = dest[key].value
         return dest  
+
 
 init_formatted_properties(GridBot.Parameter, GridBot.Parameter.fields_to_format)
 
