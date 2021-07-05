@@ -9,6 +9,7 @@
 
 import sys
 import time
+import requests
 from grid_trade import GridBot
 from exchanges import Bitbank
 from utils import read_config
@@ -82,9 +83,11 @@ def run_grid_bot(config_file):
                     bot.cancel_and_stop()
                     time.sleep(0.5)
                     break
-
-                bot.sync_order_status()
-                # bot.om.print_stacks()
+                
+                try:
+                    bot.sync_order_status()
+                except requests.exceptions.ConnectionError as e:
+                    discord.error(e)
 
                 elapsed = time.time() - now
                 to_sleep = check_interval - elapsed
@@ -96,8 +99,9 @@ def run_grid_bot(config_file):
         bot.cancel_and_stop()
     except Exception as e:
         bot.cancel_and_stop()
-        print(f"Unknown error: {e}")
-        discord.error(f"Unknown error: {e}")
+        msg = f"Unknown error stopping the bot: {e}"
+        print(msg)
+        discord.error(msg)
 
 
 if __name__ == "__main__":
