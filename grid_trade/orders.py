@@ -1,4 +1,8 @@
 from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class OrderSide(Enum):
     Buy = 'buy'
@@ -52,7 +56,7 @@ class Order:
         if self.status == OrderStatus.Created:
             self.status = OrderStatus.ToCancel
         elif self.status == OrderStatus.ToCreate:
-            print(f"This order is not created yet when being cancelled: {self}")
+            # print(f"This order is not created yet when being cancelled: {self}")
             self.status = OrderStatus.Cancelled
     
     def create_ok(self):
@@ -61,7 +65,7 @@ class Order:
             if self.db:
                 self.db.create_order(self.to_dict())
         else:
-            print(f"Warning: order was not at status ToCreate. {self}")
+            self._print_error_message(exp_status='ToCreate', action='Created')
     
     def create_fail(self):
         if self.status == OrderStatus.ToCreate:
@@ -74,14 +78,17 @@ class Order:
             self.status = OrderStatus.Cancelled
             self.save_status_to_db()
         else:
-            print(f"Warning: order was not at status ToCancel. {self}")  
+            self._print_error_message(exp_status='ToCancel', action='Cancelled')
 
     def trade_ok(self):
         if self.status == OrderStatus.Created:
             self.status = OrderStatus.Traded
             self.save_status_to_db()
         else:
-            print(f"Warning: order was not at status Created when being Traded. {self}") 
+            self._print_error_message(exp_status='Created', action='Traded')
+    
+    def _print_error_message(self, action='Traded', exp_status='Created'):
+        logger.warning(f"Order was not at status {exp_status} when being {action}. {self}") 
     
     def save_status_to_db(self):
         if self.db:
@@ -231,31 +238,36 @@ class OrderManager:
             if order in self.to_create:
                 order.create_ok()
             else:
-                print(f"Order not found in to_create: {order}")
+                self._print_order_not_found_error(order, action='Creating', place='to_create')
 
         def order_create_fail(self, order):
             if order in self.to_create:
                 order.create_fail()
                 self._orders.remove(order)
+            else:
+                self._print_order_not_found_error(order, action='Removing failed', place='to_create')
         
         def order_cancel_ok(self, order):
             if order in self.to_cancel:
                 order.cancel_ok()
                 self._orders.remove(order)
             else:
-                print(f"Order not found in to_cancel: {order}")
+                self._print_order_not_found_error(order, action='Cancelling', place='to_cancel')
         
         def order_traded(self, order):
             if order in self.active_orders:
                 order.trade_ok()
                 self._orders.remove(order)
             else:
-                print(f"Order not found in active orders in {self.side} stack: {order}")
+                self._print_order_not_found_error(order, action='Trading', place='active_orders')
         
         def cancel_all(self):
             for order in self.active_orders:
                 order.cancel_ok(force=True)
             self._orders.clear()
+
+        def _print_order_not_found_error(self, order, action='Creating', place='to_create'):
+            logger.warning(f"{action} order, however order not found in {place} in {self.side} stack: {order}")
         
         @property
         def expected_size(self):
@@ -328,7 +340,7 @@ class OrderManager:
     
     def print_stacks(self):
         for o in [*reversed(self.sell_stack.all_orders), *self.buy_stack.all_orders]:
-            print(f"OID<{o.order_id}> {o.side.name} @[{o.price}] - {o.status.value}")
+            logger.info(f"OID<{o.order_id}> {o.side.name} @[{o.price}] - {o.status.value}")
     
     def cancel_all(self):
         for stack in [self.buy_stack, self.sell_stack]:
@@ -359,7 +371,7 @@ class OrderManager:
         def refill_stack(price_diff, stack: self.OrderStack):
             count = int(price_diff // self.price_interval) - 1
             if count > 0:
-                print(f"Filling {count} order(s) in [{stack.side.value}] stack")
+                logger.debug(f"Filling {count} order(s) in [{stack.side.value}] stack")
                 stack.refill_orders(count=count, direction="inner")
 
         diff_buy = mid_price - self.buy_stack.best_order.price
@@ -373,7 +385,7 @@ class OrderManager:
         exp_sell_size = self.sell_stack.expected_size
         stack_to_expand = stack_to_shrink = None
 
-        print(f"ESS: {exp_sell_size}, EBS: {exp_buy_size}")
+        logger.debug(f"ESS: {exp_sell_size}, EBS: {exp_buy_size}")
         
         if exp_buy_size + exp_sell_size > self.order_limit:
             pass
@@ -389,7 +401,7 @@ class OrderManager:
         
         if stack_to_expand and stack_to_shrink:
             delta = int(size_diff // 2)
-            print(f"delta: {delta}")
+            # logger.debug(f"delta: {delta}")
             stack_to_expand.refill_orders(delta, direction="outer")
             stack_to_shrink.shrink_outer(delta)
 
