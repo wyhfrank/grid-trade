@@ -332,6 +332,11 @@ class OrderManager:
     
     def get_order_by_id(self, order_id):
         """ Find the order and the corresponding stack if exists """
+        order, _ = self.get_order_and_stack_by_order_id(order_id=order_id)
+        return order
+
+    def get_order_and_stack_by_order_id(self, order_id):
+        """ Find the order and the corresponding stack if exists """
         order = self.buy_stack.get_order(order_id=order_id)
         if order:
             return order, self.buy_stack
@@ -343,7 +348,7 @@ class OrderManager:
             
     def order_traded(self, order_id):
         """ Set the status of the order to Traded """
-        order, stack = self.get_order_by_id(order_id=order_id)
+        order, stack = self.get_order_and_stack_by_order_id(order_id=order_id)
         stack.order_traded(order)
 
     def refill_orders(self, mid_price):
