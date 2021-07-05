@@ -279,7 +279,10 @@ class GridBot:
             print('Nothing to cancel')
             return
         order_ids = [o.order_id for o in self.om.orders_to_cancel]
-        self.exchange.cancel_orders(order_ids)
+        try:
+            self.exchange.cancel_orders(order_ids)
+        except Exception as e:
+            self.notify_error(f"Cancel orders failed in {self.exchange} for orders: {order_ids}")
         for o in self.om.orders_to_cancel:
             self.om.order_cancel_ok(order=o)
 
@@ -290,6 +293,7 @@ class GridBot:
                 self.om.order_create_ok(order=o)
             except (InvalidPriceError, ExceedOrderLimitError):
                 self.om.order_create_fail(order=o)
+                self.notify_error(f"Create order failed in {self.exchange} for order: {o}")
     
     #################
     # Serialization

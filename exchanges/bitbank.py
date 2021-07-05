@@ -105,7 +105,9 @@ class Bitbank(Exchange):
         return info
     
     def get_mid_price(self):
-        return self.get_latest_prices()['mid_price']
+        info = self.get_latest_prices()
+        mid_price = info['mid_price'] if info else None
+        return mid_price
 
     def parse_currency_amount(self, response, part='base'):
         for asset in response['assets']:
