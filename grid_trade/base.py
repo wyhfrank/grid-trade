@@ -389,8 +389,8 @@ class GridBot:
     def to_dict(self, fields=None):
         dest = self.get_dict_to_serialize(fields=fields)
         for key in self.enum_values.keys():
-            # dest[key] = getattr(self, key).value
-            dest[key] = dest[key].value
+            if key in dest:
+                dest[key] = dest[key].value
         return dest  
 
 init_formatted_properties(GridBot.Parameter, GridBot.Parameter.fields_to_format)
