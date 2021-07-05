@@ -235,12 +235,20 @@ class GridBot:
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
                 oid = order_data['order_id']
+                # CARE: The following line needs to be executed before 
+                #  `self.om.order_traded(order_id=oid)`
+                #  since the order will be removed from the stack by then
+                order = self.om.get_order_by_id(order_id=oid)
+
                 # Notify the order manager that the order is traded
                 self.om.order_traded(order_id=oid)
+
                 traded_count += 1
-                order = self.om.get_order_by_id(order_id=oid)
-                self.traded_count[order.side.value] += 1
-                self.notify_order_traded(order)
+                if order:
+                    self.traded_count[order.side.value] += 1
+                    self.notify_order_traded(order)
+                else:
+                    self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 self.notify_error(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
 
