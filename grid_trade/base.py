@@ -5,7 +5,7 @@ import time
 import uuid
 from enum import Enum
 from collections import defaultdict
-from grid_trade.orders import OrderManager
+from grid_trade.orders import Order, OrderManager, OrderSide
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
 
@@ -144,6 +144,8 @@ class GridBot:
         self.traded_count = defaultdict(int)
         self.notifier = None
 
+    #################
+    # Core logic
     def init_and_start(self, param, additional_info):
         """ Init the order manager and start the bot """
         if self.om:
@@ -176,7 +178,11 @@ class GridBot:
     
     def sync_order_status(self):
         order_ids = self.om.active_order_ids
-        orders_data = self.exchange.get_orders_data(order_ids=order_ids)
+        try:
+            orders_data = self.exchange.get_orders_data(order_ids=order_ids)
+        except Exception as e:
+            self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")
+            return
         # print(f"orders_data: {orders_data}")
         traded_count = 0
         for order_data in orders_data:
@@ -187,7 +193,7 @@ class GridBot:
                 traded_count += 1
                 order = self.om.get_order_by_id(order_id=oid)
                 self.traded_count[order.side.value] += 1
-                self.notify_info(f"Order traded: {order}. Counter:{self.traded_count}")
+                self.notify_order_traded(order)
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 self.notify_error(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
 
@@ -208,6 +214,8 @@ class GridBot:
         # self.om.print_stacks()
         self.update_bot_info_to_db()
 
+    #################
+    # DB related
     # TODO: add method to recover from db
     def recover_from_db(self):
         pass
@@ -227,7 +235,9 @@ class GridBot:
             return db
         except Exception:
             return None
-    
+
+    #################
+    # Notification / Message related
     def notify_info(self, message):
         if self.notifier:
             self.notifier.info(message)
@@ -235,7 +245,25 @@ class GridBot:
     def notify_error(self, message):
         if self.notifier:
             self.notifier.error(message)
+    
+    def notify_order_traded(self, order):
+        if self.notifier:
+            side = 'buy' if order.side==OrderSide.Buy else 'sell'
+            message = self.format_order_traded(order=order, traded_count=self.traded_count)
+            self.notifier.send_trade_msg(message, side)
 
+    @classmethod
+    def format_order_traded(cls, order: Order, traded_count: dict):
+        current_side = 0
+        total_count = 0
+        for k, v in traded_count.items():
+            if k == order.side.value:
+                current_side = v
+            total_count += v
+        return f"#{total_count}. {order.short_markdown}. ({order.side.value} #{current_side})"
+
+    #################
+    # Private methods
     def _commit_cancel_orders(self):
         if len(self.om.orders_to_cancel) <= 0:
             print('Nothing to cancel')
@@ -252,7 +280,9 @@ class GridBot:
                 self.om.order_create_ok(order=o)
             except (InvalidPriceError, ExceedOrderLimitError):
                 self.om.order_create_fail(order=o)
-
+    
+    #################
+    # Serialization
     def get_dict_to_serialize(self):
         dest = {
             'uid': self.uid,

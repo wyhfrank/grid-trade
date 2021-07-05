@@ -131,6 +131,10 @@ class Order:
         dest = self.get_dict_to_serialize()
         variables = [f"{k}={v.value if isinstance(v, Enum) else v}" for k,v in dest.items()]
         return "{0}({1})".format(self.__class__.__name__, ", ".join(variables))
+    
+    @property
+    def short_markdown(self) -> str:
+        return f"{self.user} {self.side.value} {self.amount} {self.pair} @ **{self.price}**"
 
 
 class OrderManager:
