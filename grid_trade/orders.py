@@ -115,6 +115,7 @@ class Order:
         dest = vars(self).copy()
         dest['price'] = new_price
         dest['status'] = status
+        dest['order_id'] = None
         obj = self.__class__(**dest)
         return obj
     
