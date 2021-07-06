@@ -1,4 +1,5 @@
 import os
+import logging
 from datetime import datetime
 import asyncio
 import yaml
@@ -86,3 +87,24 @@ def init_formatted_properties(cls, fields_to_format):
         precision = setting.get('precision', 5)
         is_ratio = setting.get('is_ratio', False)
         setattr(cls, field + '_s', get_formatter(field=field, precision=precision, is_ratio=is_ratio))
+
+
+def setup_logging(level=logging.INFO):
+    logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
+                        datefmt='%Y-%m-%d %H:%M:%S')
+
+#################
+# Tests
+def test_logging():
+    # setup_logging(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    # logger.setLevel(logging.DEBUG)
+    # print(logging.getLevelName(logger.level))
+    logger.debug('debug')
+    logger.info('info')
+    logger.warning('warning')
+    logger.error('error')
+    logger.critical('critical')
+
+if __name__ == '__main__':
+    test_logging()
