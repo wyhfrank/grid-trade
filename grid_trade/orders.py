@@ -314,9 +314,11 @@ class OrderManager:
 
             if self.best_order:
                 logger.debug(f"Filling {count} order(s) in [{self.side.value}] stack towards {direction}")
-                for i in range(count):
-                    o = self.best_order.copy(self.price_interval * (i+1), direction=direction)
-                    self._orders.append(o)
+                current_best_price = self.best_order.price
+                # Since the current_best_price is on the grid, we need to skip it by using [1:]
+                prices = list(self.get_price_grid(current_best_price, direction=direction, count=count+1))[1:]
+                for price in prices:
+                    self.prepare_order_at_price(price=price)
                 self.sort()
             else:
                 raise ValueError(f"In refill_orders, best_order is None. {self}")

@@ -14,6 +14,9 @@ make run
 
 ## TODO
 
+- [x] Bug: orders are not refilled properly
+- [x] Bug: duplicate orders exist
+- [ ] Format prices for orders and params (remove floating point)
 - [ ] Reset the bot only when price changed over a certain degree (instead of doing this by time interval)
 - [ ] Calculate earn rate
 - [ ] Recover bot from db if stopped. (perhaps not needed)
