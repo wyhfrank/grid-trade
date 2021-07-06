@@ -3,7 +3,7 @@ sys.path.append('.')
 
 import logging
 from enum import Enum
-from utils import init_formatted_properties
+from utils import init_formatted_properties, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -384,6 +384,7 @@ class OrderManager:
                 logger.debug(f"Filling {count} order(s) in [{stack.side.value}] stack")
                 stack.refill_orders(count=count, direction="inner")
 
+        # TODO: self.buy_stack.best_order might be None
         diff_buy = mid_price - self.buy_stack.best_order.price
         refill_stack(diff_buy, self.buy_stack)
         
@@ -454,13 +455,13 @@ def test_om():
     api_secret = config['api']['secret']
 
     pair = 'eth_jpy'
-    ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
+    # ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
 
     additional_info = {
         'pair': pair,
         'user': 'user1',
-        'exchange': ex.name,
-        'db': fsm,
+        # 'exchange': ex.name,
+        # 'db': fsm,
     }
     price_interval=500
     unit_amount=0.2
@@ -495,5 +496,6 @@ def test_om():
 
 
 if __name__ == '__main__':
-    test_order()
-    # test_om()
+    setup_logging(level=logging.DEBUG)
+    # test_order()
+    test_om()

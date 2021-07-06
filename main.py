@@ -13,7 +13,7 @@ import requests
 import logging
 from grid_trade import GridBot
 from exchanges import Bitbank
-from utils import read_config
+from utils import read_config, setup_logging
 from db.manager import FireStoreManager
 from notification import Discord
 
@@ -105,4 +105,5 @@ def run_grid_bot(config_file):
 
 
 if __name__ == "__main__":
+    setup_logging(level=logging.DEBUG)
     main()
