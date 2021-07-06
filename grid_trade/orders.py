@@ -232,13 +232,27 @@ class OrderManager:
                     user=self.om.user, exchange=self.om.exchange, db=self.om.db)
             self._orders.append(o)            
         
-        def get_price_grid(self, origin, direction='outer', size=None):
+        def get_price_grid(self, origin, direction='outer', count=None):
+            """ Returns a generator of `count` prices on grid, starting from `origin`, towards `direction`, 
+                If count is None, size is limited to `self.capacity`
+                
+                Notice that origin is only a reference point, it might not be included.
+                    It WILL be included if it is on the grid precisely
+
+                E.g., 
+                    side  : buy
+                    direction: inner
+                    grids : 100, 200, 300, 400, ...
+                    origin: 202
+                    output => 300, 400 ...
+
+            """
             flag = Order.get_direction_flag(self.side, direction=direction)
             round_func = math.ceil if flag>0 else math.floor
             distance = origin - self.init_price
             origin_on_grid = round_func(distance / self.price_interval) * self.price_interval + self.init_price
             
-            length = size if size else self.capacity
+            length = count if count else self.capacity
             for i in range(length):
                 price = origin_on_grid + flag * self.price_interval * i
                 yield price
@@ -278,7 +292,7 @@ class OrderManager:
             if not self.best_order:
                 # Stack has no orders left
                 # self.to_ideal_size(init_price=mid_price)
-                price = list(self.get_price_grid(origin=mid_price, size=1))[0]
+                price = list(self.get_price_grid(origin=mid_price, direction='outer', count=1))[0]
                 self.prepare_order_at_price(price)
                 pass
             else:
