@@ -191,7 +191,7 @@ class GridBot:
 
     #################
     # Core logic
-    def init_and_start(self, param, additional_info):
+    def init_and_start(self, param, additional_info={}):
         """ Init the order manager and start the bot """
         if self.om:
             self.notify_error("The grid trade bot is already initiated. Skip.")
