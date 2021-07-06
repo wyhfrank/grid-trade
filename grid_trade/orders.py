@@ -272,8 +272,8 @@ class OrderManager:
         #         self._orders.append(o)
 
         def refill_stack(self, mid_price):
-            """ Refill the gap between best_order and mi_price.
-                If best_order is None, fill one in the `outer` side of mide_price
+            """ Refill the gap between best_order and mid_price.
+                If best_order is None, fill one in the `outer` side of mid_price
             """
             if not self.best_order:
                 # Stack has no orders left
