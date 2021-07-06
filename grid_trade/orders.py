@@ -552,18 +552,18 @@ def test_om():
     for o in om.orders_to_create:
         om.order_create_ok(o)
 
-    om.print_stacks_size()
+    om.print_stacks()
 
     o = om.buy_stack.active_orders[0]
     om.order_traded(order_id=o.order_id)
     o = om.buy_stack.active_orders[0]
     om.order_traded(order_id=o.order_id)
-    o = om.buy_stack.active_orders[0]
-    om.order_traded(order_id=o.order_id)
+    # o = om.buy_stack.active_orders[0]
+    # om.order_traded(order_id=o.order_id)
 
-    om.print_stacks_size()
+    om.print_stacks()
 
-    mid_price = 1400
+    mid_price = 1600
     om.refill_orders(mid_price=mid_price)
     om.balance_stacks(mid_price=mid_price)
     
@@ -572,7 +572,7 @@ def test_om():
     for o in om.orders_to_create:
         om.order_create_ok(order=o)
 
-    om.print_stacks_size()
+    om.print_stacks()
 
 
 if __name__ == '__main__':
