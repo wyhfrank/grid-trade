@@ -49,5 +49,6 @@ class TestOrderStack:
 
 
 if __name__ == '__main__':
+    # https://stackoverflow.com/a/41616391/1938012
     retcode = pytest.main(['-x', __file__])
     # retcode = pytest.main(['-x', 'tests/test_order_stack.py'])
