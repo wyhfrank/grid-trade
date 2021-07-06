@@ -15,18 +15,22 @@ class Discord:
         self.also_print = also_print
         self.no_http = no_http
 
-    def info(self, message):
-        self.send(message=message, info_type='info')
+    def info(self, message, logger=None):
+        self.send(message=message, info_type='info', logger=logger)
 
-    def error(self, message, include_traceback=True):
+    def error(self, message, logger=None, include_traceback=True):
         tb = ""
         if include_traceback:
             tb = self.get_traceback_message()
-        self.send(message=str(message) + tb, info_type='error')
+        self.send(message=str(message) + tb, info_type='error', logger=logger)
 
-    def send(self, message, info_type='info'):
+    def send(self, message, info_type='info', logger=None):
         if self.also_print:
-            print(message)
+            if logger:
+                func = logger.info if info_type=='info' else logger.error
+                func(message)
+            else:
+                print(message)
         body = {}
         body['content'] = message
         self._send_post(body=body, info_type=info_type)
@@ -100,6 +104,22 @@ def test_trade_msg():
     d.send_buy_msg('#16. Micy buy 0.2 ETH @ **24000**. (buy #6)')
     d.send_sell_msg('#17. Micy sell 0.2 ETH @ **24000**. (sell #4)')
 
+
+def test_logger():
+    import sys
+    sys.path.append('.')
+    import logging
+    from utils import setup_logging
+    setup_logging(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+
+    d = load_discord(no_http=True)
+    d.info('info', logger=logger)
+    d.error('error', logger=logger)
+    d.error('error, no logger')
+    
+
 if __name__ == '__main__':
     # test_error()
-    test_trade_msg()
+    # test_trade_msg()
+    test_logger()
