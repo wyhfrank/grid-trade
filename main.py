@@ -34,7 +34,7 @@ def run_grid_bot(config_file):
         logger.error("FireStoreManager cannot be initialized due to: ", e)
     config = read_config(fn=config_file)
 
-    config_logging(config['logging'])
+    config_logging(config.get('logging', None))
 
     api_key = config['api']['key']
     api_secret = config['api']['secret']
