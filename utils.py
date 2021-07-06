@@ -1,3 +1,5 @@
+from collections import defaultdict
+from functools import reduce
 import os
 import logging
 from datetime import datetime
@@ -93,6 +95,25 @@ def setup_logging(level=logging.INFO):
     logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
                         datefmt='%Y-%m-%d %H:%M:%S')
 
+
+def config_logging(logging_config):
+    c = logging_config if logging_config else {}
+    level_s =c.get('level', 'INFO')
+    level = getattr(logging, level_s) if hasattr(logging, level_s) else logging.INFO
+    setup_logging(level=level)
+
+
+class DefaultCounter(defaultdict):
+    def __init__(self, *args, **kwargs):
+        return super().__init__(int, *args, **kwargs)
+
+    @property
+    def total(self):
+        if self.values():
+            return reduce(lambda x,y: x+y, self.values())
+        else:
+            return 0
+
 #################
 # Tests
 def test_logging():
@@ -106,5 +127,28 @@ def test_logging():
     logger.error('error')
     logger.critical('critical')
 
-if __name__ == '__main__':
+
+def test_config_logging():
+    config = None
+    config = {}
+    config = {
+        'level': 'DEBUG'
+    }
+    config_logging(config)
+
     test_logging()
+
+
+def test_default_counter():
+    counter = DefaultCounter()
+    # counter['a'] = 1
+    # counter['b'] += 2
+    print(counter.total)
+    print(counter)
+
+
+if __name__ == '__main__':
+    # test_logging()
+    # test_config_logging()
+    test_default_counter()
+

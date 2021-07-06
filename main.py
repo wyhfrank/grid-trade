@@ -13,7 +13,7 @@ import requests
 import logging
 from grid_trade import GridBot
 from exchanges import Bitbank
-from utils import read_config, setup_logging
+from utils import read_config, config_logging
 from db.manager import FireStoreManager
 from notification import Discord
 
@@ -33,6 +33,9 @@ def run_grid_bot(config_file):
     except ValueError as e:
         logger.error("FireStoreManager cannot be initialized due to: ", e)
     config = read_config(fn=config_file)
+
+    config_logging(config['logging'])
+
     api_key = config['api']['key']
     api_secret = config['api']['secret']
 
@@ -91,7 +94,7 @@ def run_grid_bot(config_file):
                 elapsed = time.time() - now
                 to_sleep = check_interval - elapsed
                 if to_sleep > 0:
-                    logger.debug(f"Sleep for: {to_sleep:.3f}s")
+                    # logger.debug(f"Sleep for: {to_sleep:.3f}s")
                     time.sleep(to_sleep)
     except KeyboardInterrupt:
         logger.info(f"On KeyboardInterrupt, cancel all orders and stop the bot...")
@@ -103,7 +106,5 @@ def run_grid_bot(config_file):
             bot.cancel_and_stop()
 
 
-
 if __name__ == "__main__":
-    setup_logging(level=logging.DEBUG)
     main()

@@ -18,3 +18,6 @@ user:
 discord:
   info: YOUR_INFO_WEBHOOK
   error: YOUR_ERR_WEBHOOK
+
+logging:
+  level: INFO

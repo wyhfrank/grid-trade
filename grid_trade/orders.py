@@ -417,13 +417,13 @@ class OrderManager:
     def db(self):
         return self.get_additional('db')
     
-    def debug_show_stacks(self):
-        self.debug_show_stacks_size()
+    def print_stacks(self):
+        self.print_stacks_size()
         for o in [*reversed(self.sell_stack.all_orders), *self.buy_stack.all_orders]:
             logger.debug(f"OID<{o.order_id}> {o.side.name} @[{o.price}] - {o.status.value}")
     
-    def debug_show_stacks_size(self):
-        logger.debug(f"Stack size [buy: {len(self.buy_stack.all_orders)}, sell: {len(self.sell_stack.all_orders)}]")
+    def print_stacks_size(self):
+        logger.info(f"Stack size [buy: {len(self.buy_stack.all_orders)}, sell: {len(self.sell_stack.all_orders)}]")
     
     def cancel_all(self):
         for stack in [self.buy_stack, self.sell_stack]:
@@ -551,7 +551,7 @@ def test_om():
     for o in om.orders_to_create:
         om.order_create_ok(o)
 
-    om.debug_show_stacks_size()
+    om.print_stacks_size()
 
     o = om.buy_stack.active_orders[0]
     om.order_traded(order_id=o.order_id)
@@ -560,7 +560,7 @@ def test_om():
     o = om.buy_stack.active_orders[0]
     om.order_traded(order_id=o.order_id)
 
-    om.debug_show_stacks_size()
+    om.print_stacks_size()
 
     mid_price = 1400
     om.refill_orders(mid_price=mid_price)
@@ -571,7 +571,7 @@ def test_om():
     for o in om.orders_to_create:
         om.order_create_ok(order=o)
 
-    om.debug_show_stacks_size()
+    om.print_stacks_size()
 
 
 if __name__ == '__main__':

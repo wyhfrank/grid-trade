@@ -2,6 +2,7 @@ import sys
 sys.path.append('.')
 
 import time
+import logging
 import uuid
 from typing import Iterable
 from enum import Enum
@@ -9,7 +10,9 @@ from collections import defaultdict
 from grid_trade.orders import Order, OrderManager, OrderSide
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
-from utils import init_formatted_properties
+from utils import DefaultCounter, init_formatted_properties
+
+logger = logging.getLogger(__name__)
 
 
 class BotStatus(Enum):
@@ -230,7 +233,7 @@ class GridBot:
             self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")
             return
         # print(f"orders_data: {orders_data}")
-        traded_count = 0
+        counter = DefaultCounter()
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
                 oid = order_data['order_id']
@@ -242,22 +245,34 @@ class GridBot:
                 # Notify the order manager that the order is traded
                 self.om.order_traded(order_id=oid)
 
-                traded_count += 1
                 if order:
                     self.traded_count[order.side.value] += 1
+                    counter[order.side.value] += 1
                     self.notify_order_traded(order)
                 else:
+                    counter['unknown'] += 1
+                    self.traded_count['unknown'] += 1
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
-                self.notify_error(f"Order is possibly cancelled by the uesr: {order_data['order_id']}")
+                msg = f"Order is possibly cancelled by the uesr: {order_data['order_id']}"
+                logger.warning(msg)
+                # self.notify_error(msg) # This will be spamming
 
-        if traded_count <= 0:
+        if counter.total <= 0:
+            # No orders traded
             return
-        if traded_count > 1:
-            self.notify_error(f"More than 1 orders are traded: [{traded_count}] orders")
+        
+        logger.info(f"Order(s) traded: ["
+                    f"+ {counter[OrderSide.Buy.value]} "
+                    f"- {counter[OrderSide.Sell.value]} "
+                    f"? {counter['unknown']}]")
+        if counter.total > 1:
+            self.notify_error(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
         mid_price = self.exchange.get_mid_price()
         self.latest_price = mid_price
         if mid_price > self.param.highest_price or mid_price < self.param.lowest_price:
+            logger.info(f"Current price (`{mid_price}`) exceeds price range: " + \
+                        f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
             # self.notify_error(f"Current price (`{mid_price}`) exceeds price range: " + \
                             #   f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
             return False
@@ -267,7 +282,7 @@ class GridBot:
         self.om.balance_stacks(mid_price=mid_price)
         self._commit_cancel_orders()
         self._commit_create_orders()
-        # self.om.print_stacks()
+        self.om.print_stacks()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
 
     #################
