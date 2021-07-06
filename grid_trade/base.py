@@ -268,18 +268,20 @@ class GridBot:
                     f"?{counter['unknown']}]")
         if counter.total > 1:
             self.notify_error(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
-        mid_price = self.exchange.get_mid_price()
-        self.latest_price = mid_price
-        if mid_price > self.param.highest_price or mid_price < self.param.lowest_price:
-            logger.info(f"Current price (`{mid_price}`) exceeds price range: " + \
+        # mid_price = self.exchange.get_mid_price()
+        price_info = self.exchange.get_latest_prices()
+        new_price = price_info['price']
+        self.latest_price = new_price
+        if new_price > self.param.highest_price or new_price < self.param.lowest_price:
+            logger.info(f"Current price (`{new_price}`) exceeds price range: " + \
                         f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
-            # self.notify_error(f"Current price (`{mid_price}`) exceeds price range: " + \
+            # self.notify_error(f"Current price (`{new_price}`) exceeds price range: " + \
                             #   f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
             return False
 
         # Refill with new orders (create new orders in the opposite stack)
-        self.om.refill_orders(mid_price=mid_price)
-        self.om.balance_stacks(mid_price=mid_price)
+        self.om.refill_orders(new_price=new_price)
+        self.om.balance_stacks(new_price=new_price)
         self._commit_cancel_orders()
         self._commit_create_orders()
         self.om.print_stacks()
@@ -461,7 +463,7 @@ def test_gridbot():
     init_price = 257000
     fee = -0.002
 
-    init_price = ex.get_mid_price()
+    init_price = ex.get_new_price()
     bot = GridBot(exchange=ex)
     param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
                                             price_interval=price_interval, grid_num=grid_num, pair=pair, fee=fee)

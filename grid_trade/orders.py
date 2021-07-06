@@ -257,7 +257,7 @@ class OrderManager:
                 price = origin_on_grid + flag * self.price_interval * i
                 yield price
         
-        # def to_ideal_size(self, mid_price):
+        # def to_ideal_size(self, new_price):
         #     """
         #     x: sell orders
         #     o: buy orders
@@ -274,7 +274,7 @@ class OrderManager:
         #         x$_ _ ? o o o       after 2 sell orders traded
         #     x x x$= o o o         final state
         #     """
-        #     for i, price in enumerate(self.get_price_grid(origin=mid_price)):
+        #     for i, price in enumerate(self.get_price_grid(origin=new_price)):
         #         if i==0:
         #             if self.best_order:
         #                 if price == self.best_order.price:
@@ -285,18 +285,18 @@ class OrderManager:
         #                 user=self.om.user, exchange=self.om.exchange, db=self.om.db)
         #         self._orders.append(o)
 
-        def refill_stack(self, mid_price):
-            """ Refill the gap between best_order and mid_price.
-                If best_order is None, fill one in the `outer` side of mid_price
+        def refill_stack(self, new_price):
+            """ Refill the gap between best_order and new_price.
+                If best_order is None, fill one in the `outer` side of new_price
             """
             if not self.best_order:
                 # Stack has no orders left
-                # self.to_ideal_size(init_price=mid_price)
-                price = list(self.get_price_grid(origin=mid_price, direction='outer', count=1))[0]
+                # self.to_ideal_size(init_price=new_price)
+                price = list(self.get_price_grid(origin=new_price, direction='outer', count=1))[0]
                 self.prepare_order_at_price(price)
                 pass
             else:
-                price_diff = mid_price - self.best_order.price
+                price_diff = new_price - self.best_order.price
                 if self.side == OrderSide.Sell:
                     price_diff = - price_diff
                 count = int(price_diff // self.price_interval) - 1
@@ -467,11 +467,11 @@ class OrderManager:
         order, stack = self.get_order_and_stack_by_order_id(order_id=order_id)
         stack.order_traded(order)
 
-    def refill_orders(self, mid_price):
-        self.buy_stack.refill_stack(mid_price=mid_price)
-        self.sell_stack.refill_stack(mid_price=mid_price)
+    def refill_orders(self, new_price):
+        self.buy_stack.refill_stack(new_price=new_price)
+        self.sell_stack.refill_stack(new_price=new_price)
 
-    def balance_stacks(self, mid_price):
+    def balance_stacks(self, new_price):
         exp_buy_size = self.buy_stack.expected_size
         exp_sell_size = self.sell_stack.expected_size
         stack_to_expand = stack_to_shrink = None
@@ -484,8 +484,8 @@ class OrderManager:
         # trigger_balance = min(exp_buy_size, exp_sell_size) <= self.balance_threshold
 
         # if exceed_limit or trigger_balance:
-        #     self.buy_stack.to_ideal_size(mid_price=mid_price)
-        #     self.sell_stack.to_ideal_size(mid_price=mid_price)
+        #     self.buy_stack.to_ideal_size(new_price=new_price)
+        #     self.sell_stack.to_ideal_size(new_price=new_price)
         # return
         exceed_limit = exp_buy_size + exp_sell_size > self.order_limit
 
@@ -579,9 +579,9 @@ def test_om():
 
     om.print_stacks()
 
-    mid_price = 1600
-    om.refill_orders(mid_price=mid_price)
-    om.balance_stacks(mid_price=mid_price)
+    new_price = 1600
+    om.refill_orders(new_price=new_price)
+    om.balance_stacks(new_price=new_price)
     
     for o in om.orders_to_cancel:
         om.order_cancel_ok(o)
