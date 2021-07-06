@@ -1,6 +1,7 @@
 import sys
 sys.path.append('.')
 
+import math
 import logging
 from enum import Enum
 from utils import init_formatted_properties, setup_logging
@@ -159,6 +160,7 @@ class OrderManager:
     class OrderStack:
         def __init__(self, om, side: OrderSide) -> None:
             self.om = om
+            self.init_price = 0
             self.side = side
             self._orders = []
         
@@ -183,7 +185,7 @@ class OrderManager:
             return [o.order_id for o in self._orders]
         
         @property
-        def best_order(self):
+        def best_order(self) -> Order:
             self.sort()
             return self._orders[0] if len(self._orders) > 0 else None
 
@@ -218,24 +220,91 @@ class OrderManager:
         
         def prepare_init(self, init_price):
             """ Init stack with limited numbers of orders, based on init_price """
-
+            self.init_price = init_price
+            flag = Order.get_direction_flag(self.side, direction="outer")
             for i in range(self.active_limit):
-                flag = Order.get_direction_flag(self.side, direction="outer")
                 price = init_price + flag * self.price_interval * (i+1)
-                o = Order(price=price, amount=self.unit_amount, side=self.side, 
-                        pair=self.om.pair, user=self.om.user, exchange=self.om.exchange, db=self.om.db)
-                self._orders.append(o)
+                self.prepare_order_at_price(price=price)
+
+        def prepare_order_at_price(self, price):
+            o = Order(price=price, amount=self.unit_amount, side=self.side, pair=self.om.pair, 
+                    user=self.om.user, exchange=self.om.exchange, db=self.om.db)
+            self._orders.append(o)            
+        
+        def get_price_grid(self, origin, direction='outer', size=None):
+            flag = Order.get_direction_flag(self.side, direction=direction)
+            round_func = math.ceil if flag>0 else math.floor
+            distance = origin - self.init_price
+            origin_on_grid = round_func(distance / self.price_interval) * self.price_interval + self.init_price
+            
+            length = size if size else self.capacity
+            for i in range(length):
+                price = origin_on_grid + flag * self.price_interval * i
+                yield price
+        
+        # def to_ideal_size(self, mid_price):
+        #     """
+        #     x: sell orders
+        #     o: buy orders
+        #     $: current price
+        #     _: traded order
+        #     ?: temporary empty space
+        #     =: intentional empty space
+
+        #         x x x $ o o o       init state
+        #         x x$_ ? o o o       after 1 sell order traded
+        #       x x x$= o o o         final state
+
+        #         x x x $ o o o       init state
+        #         x$_ _ ? o o o       after 2 sell orders traded
+        #     x x x$= o o o         final state
+        #     """
+        #     for i, price in enumerate(self.get_price_grid(origin=mid_price)):
+        #         if i==0:
+        #             if self.best_order:
+        #                 if price == self.best_order.price:
+        #                     # WIP
+        #                     pass
+
+        #         o = Order(price=price, amount=self.unit_amount, side=self.side, pair=self.om.pair, 
+        #                 user=self.om.user, exchange=self.om.exchange, db=self.om.db)
+        #         self._orders.append(o)
+
+        def refill_stack(self, mid_price):
+            """ Refill the gap between best_order and mi_price.
+                If best_order is None, fill one in the `outer` side of mide_price
+            """
+            if not self.best_order:
+                # Stack has no orders left
+                # self.to_ideal_size(init_price=mid_price)
+                price = list(self.get_price_grid(origin=mid_price, size=1))[0]
+                self.prepare_order_at_price(price)
+                pass
+            else:
+                price_diff = mid_price - self.best_order.price
+                if self.side == OrderSide.Sell:
+                    price_diff = - price_diff
+                count = int(price_diff // self.price_interval) - 1
+                if count > 0:
+                    self.refill_orders(count=count, direction="inner")
+
 
         def refill_orders(self, count=1, direction="inner"):
             """ Refill the stack with certain numbers of orders with direction
                     direction: `inner`  means towards the center of current price
                                 `outer` means creating more backup orders
             """
-            if self.best_order and count > 0:
+            if count <= 0:
+                return
+
+            if self.best_order:
+                logger.debug(f"Filling {count} order(s) in [{self.side.value}] stack towards {direction}")
                 for i in range(count):
                     o = self.best_order.copy(self.price_interval * (i+1), direction=direction)
                     self._orders.append(o)
                 self.sort()
+            else:
+                raise ValueError(f"In refill_orders, best_order is None. {self}")
 
         def shrink_outer(self, count=1):
             """ Prepare to remove `count` of the orders from the outer """
@@ -283,7 +352,7 @@ class OrderManager:
         def expected_size(self):
             return len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created])) 
             
-    def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_threshold=1, additional_info=None) -> None:
+    def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_threshold=2, additional_info=None) -> None:
         """ 
             balance_threshold: balance the size of two stacks when the size of either stack is <= this threshold
         """
@@ -310,7 +379,7 @@ class OrderManager:
         stack.order_create_ok(order)
 
     def order_cancel_ok(self, order):
-        """ Set the status of the order to Canceld """
+        """ Set the status of the order to Cancelled """
         stack = self.buy_stack if order.side==OrderSide.Buy else self.sell_stack
         stack.order_cancel_ok(order)
 
@@ -348,9 +417,13 @@ class OrderManager:
     def db(self):
         return self.get_additional('db')
     
-    def print_stacks(self):
+    def debug_show_stacks(self):
+        self.debug_show_stacks_size()
         for o in [*reversed(self.sell_stack.all_orders), *self.buy_stack.all_orders]:
-            logger.info(f"OID<{o.order_id}> {o.side.name} @[{o.price}] - {o.status.value}")
+            logger.debug(f"OID<{o.order_id}> {o.side.name} @[{o.price}] - {o.status.value}")
+    
+    def debug_show_stacks_size(self):
+        logger.debug(f"Stack size [buy: {len(self.buy_stack.all_orders)}, sell: {len(self.sell_stack.all_orders)}]")
     
     def cancel_all(self):
         for stack in [self.buy_stack, self.sell_stack]:
@@ -378,27 +451,29 @@ class OrderManager:
         stack.order_traded(order)
 
     def refill_orders(self, mid_price):
-        def refill_stack(price_diff, stack: self.OrderStack):
-            count = int(price_diff // self.price_interval) - 1
-            if count > 0:
-                logger.debug(f"Filling {count} order(s) in [{stack.side.value}] stack")
-                stack.refill_orders(count=count, direction="inner")
+        self.buy_stack.refill_stack(mid_price=mid_price)
+        self.sell_stack.refill_stack(mid_price=mid_price)
 
-        # TODO: self.buy_stack.best_order might be None
-        diff_buy = mid_price - self.buy_stack.best_order.price
-        refill_stack(diff_buy, self.buy_stack)
-        
-        diff_sell =  self.sell_stack.best_order.price - mid_price
-        refill_stack(diff_sell, self.sell_stack)
-
-    def blance_stacks(self):
+    def balance_stacks(self, mid_price):
         exp_buy_size = self.buy_stack.expected_size
         exp_sell_size = self.sell_stack.expected_size
         stack_to_expand = stack_to_shrink = None
 
-        logger.debug(f"ESS: {exp_sell_size}, EBS: {exp_buy_size}")
+        logger.debug(f"Expected size "
+                    f"[buy: {exp_buy_size}, "
+                    f"sell: {exp_sell_size}]")
         
-        if exp_buy_size + exp_sell_size > self.order_limit:
+        # exceed_limit = exp_buy_size + exp_sell_size > self.order_limit
+        # trigger_balance = min(exp_buy_size, exp_sell_size) <= self.balance_threshold
+
+        # if exceed_limit or trigger_balance:
+        #     self.buy_stack.to_ideal_size(mid_price=mid_price)
+        #     self.sell_stack.to_ideal_size(mid_price=mid_price)
+        # return
+        exceed_limit = exp_buy_size + exp_sell_size > self.order_limit
+
+        if exceed_limit:
+            logger.warning(f"The number of orders exceeds the limit {self.order_limit}")
             pass
 
         if exp_buy_size <= self.balance_threshold:
@@ -412,7 +487,9 @@ class OrderManager:
         
         if stack_to_expand and stack_to_shrink:
             delta = int(size_diff // 2)
-            # logger.debug(f"delta: {delta}")
+            logger.debug(f"Balancing {delta} orders from "
+                        f"[{stack_to_shrink.side.value}] stack to "
+                        f"[{stack_to_expand.side.value}] stack")
             stack_to_expand.refill_orders(delta, direction="outer")
             stack_to_shrink.shrink_outer(delta)
 
@@ -474,25 +551,27 @@ def test_om():
     for o in om.orders_to_create:
         om.order_create_ok(o)
 
-    om.print_stacks()
+    om.debug_show_stacks_size()
 
     o = om.buy_stack.active_orders[0]
     om.order_traded(order_id=o.order_id)
     o = om.buy_stack.active_orders[0]
     om.order_traded(order_id=o.order_id)
+    o = om.buy_stack.active_orders[0]
+    om.order_traded(order_id=o.order_id)
 
-    om.print_stacks()
+    om.debug_show_stacks_size()
 
-    mid_price = 1800
+    mid_price = 1400
     om.refill_orders(mid_price=mid_price)
-
-    om.blance_stacks()
+    om.balance_stacks(mid_price=mid_price)
+    
     for o in om.orders_to_cancel:
         om.order_cancel_ok(o)
     for o in om.orders_to_create:
         om.order_create_ok(order=o)
 
-    om.print_stacks()
+    om.debug_show_stacks_size()
 
 
 if __name__ == '__main__':

@@ -263,8 +263,8 @@ class GridBot:
             return False
 
         # Refill with new orders (create new orders in the opposite stack)
-        self.om.refill_orders(mid_price)
-        self.om.blance_stacks()
+        self.om.refill_orders(mid_price=mid_price)
+        self.om.balance_stacks(mid_price=mid_price)
         self._commit_cancel_orders()
         self._commit_create_orders()
         # self.om.print_stacks()
