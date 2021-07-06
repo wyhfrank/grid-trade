@@ -437,7 +437,7 @@ class OrderManager:
     def print_stacks(self):
         self.print_stacks_size()
         for o in [*reversed(self.sell_stack.all_orders), *self.buy_stack.all_orders]:
-            logger.debug(f"OID<{o.order_id}> {o.side.name} @[{o.price}] - {o.status.value}")
+            logger.info(f"OID<{o.order_id}> {o.side.name} @[{o.price_s}] - {o.status.value}")
     
     def print_stacks_size(self):
         logger.info(f"Stack size [buy: {len(self.buy_stack.all_orders)}, sell: {len(self.sell_stack.all_orders)}]")
