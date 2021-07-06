@@ -48,12 +48,12 @@ class Order:
                 executed_at=None, ordered_at=None, post_only=True, user='', exchange='',
                 db=None):
         self.order_id = order_id
+        self.price = price
+        self.amount = amount
+        self.side = side
         self.couple_id = couple_id
         self.pair = pair
-        self.side = side
         self.order_type = order_type
-        self.amount = amount
-        self.price = price
         self.average_price = average_price
         self.ordered_at = ordered_at
         self.executed_at = executed_at
