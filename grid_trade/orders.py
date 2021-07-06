@@ -39,8 +39,8 @@ class Order:
     # A new property of `NAME_s` will be added for each of the `NAME` variables
     fields_to_format = {
         'amount': {},
-        'price': {'precision': 1},
-        'average_price': {'precision': 1},
+        'price': {'precision': 0},
+        'average_price': {'precision': 0},
     }    
 
     def __init__(self, price, amount, pair, order_type=OrderType.Limit, order_id=None, couple_id=None, 
