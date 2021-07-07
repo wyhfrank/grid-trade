@@ -218,7 +218,7 @@ class GridBot:
         try:
             self.exchange.cancel_orders(order_ids)
         except Exception as e:
-            self.notify_error(f"Cancel orders failed for {self.exchange}. Plesase check manually!")
+            self.notify_error(f"Cancel orders failed for {self.exchange}. Please check manually!")
         self.om.cancel_all()
         self.stopped_at = time.time()        
         self.status = BotStatus.Stopped
