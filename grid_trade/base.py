@@ -318,11 +318,11 @@ class GridBot:
     # Notification / Message related
     def notify_info(self, message):
         if self.notifier:
-            self.notifier.info(message)
+            self.notifier.info(message, logger=logger)
 
     def notify_error(self, message):
         if self.notifier:
-            self.notifier.error(message)
+            self.notifier.error(message, logger=logger)
     
     def notify_order_traded(self, order):
         if self.notifier:
