@@ -11,6 +11,7 @@ def raise_my_error():
 
 def test_wrapper(n=5, limit=3):
     def wrapper(n):
+
         if n <=0:
             raise_my_error()
         else:
@@ -38,9 +39,29 @@ def test_sys_exc_info():
         lines = traceback.format_tb(tb)
         print("".join(lines))
         # traceback.print_tb(tb)
-        
 
+def test_print_exception_module():
+    try:
+        raise_my_error()
+
+    except MyException as e:
+        print(e.args)
+
+def test_dynamic_except():
+    # KnownExceptions = (MyException, ValueError)
+    KnownExceptions = ()
+
+    try:
+        # raise TypeError('abc')
+        raise ValueError('vvv')
+        raise MyException('mmm')
+    except KnownExceptions as e:
+        print(e)
+    except ValueError as e:
+        print(e)
 
 # test_traceback()
 # test_wrapper(n=10, limit=10)
-test_sys_exc_info()
+# test_sys_exc_info()
+# test_print_exception_module()
+test_dynamic_except()

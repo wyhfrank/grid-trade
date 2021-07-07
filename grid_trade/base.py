@@ -7,7 +7,6 @@ import uuid
 from typing import Iterable
 from enum import Enum
 from collections import defaultdict
-import requests
 from grid_trade.orders import Order, OrderManager, OrderSide
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
@@ -238,7 +237,7 @@ class GridBot:
             # No orders traded
             return
         if counter.total > 1:
-            self.notify_error(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
+            logger.warning(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
 
         new_price = self._adjust_orders_to_current_price()
         if not new_price:
@@ -256,7 +255,7 @@ class GridBot:
         order_ids = self.om.active_order_ids
         try:
             orders_data = self.exchange.get_orders_data(order_ids=order_ids)
-        except (requests.exceptions.SSLError, ConnectionResetError) as e:
+        except self.exchange.KnownExceptions as e:
             logger.error(f"Known error during retrievning orders: {e}")
         except Exception as e:
             self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")

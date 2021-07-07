@@ -1,5 +1,7 @@
 from enum import Enum
+import requests
 import python_bitbankcc
+
 
 class ExceedOrderLimitError(Exception):
     pass
@@ -12,6 +14,8 @@ class InvalidPriceError(Exception):
 class Exchange:
     name = 'AbstractExchange'
     fee = 0
+    # Known exceptions that does not impact too much on the process
+    KnownExceptions = () 
 
     def __init__(self, pair: str, max_order_count=10, api_key=None, api_secret=None) -> None:
         self.max_order_count = max_order_count
@@ -78,6 +82,9 @@ class Bitbank(Exchange):
 
     name = 'bitbank'
     fee = -0.002
+    # Known exceptions that does not impact too much on the process
+    KnownExceptions = (requests.exceptions.SSLError, 
+                    requests.exceptions.ConnectionResetError) 
 
     class OrderStatus(Enum):
         # UNFILLED, PARTIALLY_FILLED, FULLY_FILLED, CANCELED_UNFILLED, CANCELED_PARTIALLY_FILLED
