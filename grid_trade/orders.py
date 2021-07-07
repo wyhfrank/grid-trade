@@ -349,6 +349,13 @@ class OrderManager:
                 self._orders.remove(order)
             else:
                 self._print_order_not_found_error(order, action='Cancelling', place='to_cancel')
+
+        def order_force_cancelled(self, order: Order):
+            if order in self._orders:
+                order.cancel_ok(force=True)
+                self._orders.remove(order)
+            else:
+                self._print_order_not_found_error(order, action='Force cancelling', place='_orders')
         
         def order_traded(self, order):
             if order in self.active_orders:
@@ -394,6 +401,22 @@ class OrderManager:
         """ Set the status of the order to Created """
         stack = self.buy_stack if order.side==OrderSide.Buy else self.sell_stack
         stack.order_create_ok(order)
+    
+    def order_force_cancelled(self, order_id=None, order=None):
+        """ Set the status of the order to Cancelled by force
+            Either order_id or order is ok, order_id takes the priority
+        """
+        if not order_id and not order:
+            logger.error(f"In order_force_cancelled: at least one must be provided: [order_id | order]")
+            return False
+        if order_id:
+            order, stack = self.get_order_and_stack_by_order_id(order_id=order_id)
+            if not order:
+                logger.error(f"In order_force_cancelled: order not found by id: {order_id}")
+                return False
+        else:
+            stack = self.buy_stack if order.side==OrderSide.Buy else self.sell_stack
+        stack.order_force_cancelled(order)
 
     def order_cancel_ok(self, order):
         """ Set the status of the order to Cancelled """

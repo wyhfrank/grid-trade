@@ -180,7 +180,7 @@ class GridBot:
             uid = str(uuid.uuid4())
         self.uid = uid
         self.exchange = exchange
-        self.om = None
+        self.om: OrderManager = None
         self.param: GridBot.Parameter = param
         self.additional_info = None
         self.status = status
@@ -254,7 +254,10 @@ class GridBot:
                     self.traded_count['unknown'] += 1
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
-                msg = f"Order is possibly cancelled by the uesr: {order_data['order_id']}"
+                oid = order_data['order_id']
+                # Force cancel the order
+                self.om.order_force_cancelled(order_id=oid)
+                msg = f"Order possibly failed during creation or cancelled by the uesr: {oid}"
                 logger.warning(msg)
                 # self.notify_error(msg) # This will be spamming
 
@@ -365,7 +368,7 @@ class GridBot:
                 self.exchange.create_order(o)
                 self.om.order_create_ok(order=o)
             except (InvalidPriceError, ExceedOrderLimitError):
-                self.om.order_create_fail(order=o)
+                self.om.order_force_cancelled(order=o)
                 self.notify_error(f"Create order failed in {self.exchange} for order: {o}")
     
     #################
