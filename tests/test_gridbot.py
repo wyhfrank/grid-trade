@@ -109,8 +109,8 @@ class TestGridBot:
         params = GridBot.Parameter.calc_grid_params_by_support(init_base, init_quote, init_price, support, grid_num=grid_num, fee=fee)
         assert params.price_interval == 10
 
-    # @pytest.mark.skip(reason="Only works by clicking the `Run Test` button in VSCode")
-    def test_bot(self, mock_bitbank):
+    @classmethod
+    def create_bot(cls, max_order_count=4):
         init_price = 10000
         init_quote = 700
         init_base = 10
@@ -126,9 +126,15 @@ class TestGridBot:
         param = GridBot.Parameter.calc_grid_params_by_interval(init_base, init_quote, init_price, 
                                         price_interval=price_interval, pair=pair, grid_num=grid_num, fee=fee)
         bitbank = Bitbank(pair=pair)
-        bitbank.max_order_count = 4
-
+        bitbank.max_order_count = max_order_count
         bot = GridBot(bitbank)
+        return bot, param, additional
+
+
+    # @pytest.mark.skip(reason="Only works by clicking the `Run Test` button in VSCode")
+    def test_bot(self, mock_bitbank):
+        bot, param, additional = self.create_bot(max_order_count = 4)
+        
         bot.init_and_start(param=param, additional_info=additional)
 
         assert len(bot.om.active_orders) == 4
