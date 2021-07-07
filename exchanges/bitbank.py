@@ -134,11 +134,12 @@ class Bitbank(Exchange):
                                 side=side_value, order_type=order_type_value, post_only=order.post_only)
         except Exception as e:
             message = e.args[0] if e.args and len(e.args) > 0 else ''
-            # エラーコード: 60011 内容: 同時発注制限件数(30件)を上回っています
-            if '60011' in message:
-                raise ExceedOrderLimitError(message)
-            else:
-                raise e
+             # argument of type 'MaxRetryError' is not iterable
+            if isinstance(message, str):
+                if '60011' in message: # エラーコード: 60011 内容: 同時発注制限件数(30件)を上回っています
+                    raise ExceedOrderLimitError(message)
+
+            raise e
 
         # print("Response of create order:", order_data)
 
