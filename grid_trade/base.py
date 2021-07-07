@@ -374,7 +374,7 @@ class GridBot:
         # Create a map of order_id => order
         orders_map = {o.order_id: o for o in self.om.orders_to_cancel}
         try:
-            orders_data = self.exchange.cancel_orders(orders_map.keys())
+            orders_data = self.exchange.cancel_orders(list(orders_map.keys()))
             for od in orders_data:
                 oid = od['order_id']
                 order = orders_map.get(oid, None)
