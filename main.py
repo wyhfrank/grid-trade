@@ -6,6 +6,7 @@
 4. Calculate statistics and send notifications: earn rate, yearly earn rate
 """
 
+__version__ = '0.0.1'
 
 import sys
 import time
@@ -107,4 +108,5 @@ def run_grid_bot(config_file):
 
 
 if __name__ == "__main__":
+    print(f"Version: {__version__}")
     main()
