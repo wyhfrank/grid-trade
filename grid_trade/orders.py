@@ -187,8 +187,15 @@ class OrderManager:
         
         @property
         def best_order(self) -> Order:
+            """ Return the inner-most order: order that is closest to the current price """
             self.sort()
             return self._orders[0] if len(self._orders) > 0 else None
+
+        @property
+        def worst_order(self) -> Order:
+            """ Return the outer-most order: order that is farthest from the current price """
+            self.sort()
+            return self._orders[-1] if len(self._orders) > 0 else None
 
         @property
         def to_create(self):
@@ -309,16 +316,18 @@ class OrderManager:
             if count <= 0:
                 return
 
-            if self.best_order:
-                logger.debug(f"Filling {count} order(s) in [{self.side.value}] stack towards {direction}")
-                current_best_price = self.best_order.price
-                # Since the current_best_price is on the grid, we need to skip it by setting start=1
-                prices = list(self.get_price_grid(current_best_price, direction=direction, start=1, count=count))
+            logger.debug(f"Filling {count} order(s) in [{self.side.value}] stack towards {direction}")
+
+            reference_order = self.worst_order if direction == "outer" else self.best_order
+            if reference_order:
+                origin = reference_order.price
+                # Since the origin is on the grid, we need to skip it by setting start=1
+                prices = list(self.get_price_grid(origin, direction=direction, start=1, count=count))
                 for price in prices:
                     self.prepare_order_at_price(price=price)
                 self.sort()
             else:
-                raise ValueError(f"In refill_orders, best_order is None. {self}")
+                raise ValueError(f"In refill_orders, refrenece_order is None. {self}")
 
         def shrink_outer(self, count=1):
             """ Prepare to remove `count` of the orders from the outer """
