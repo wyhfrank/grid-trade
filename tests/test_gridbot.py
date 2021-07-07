@@ -109,6 +109,7 @@ class TestGridBot:
         params = GridBot.Parameter.calc_grid_params_by_support(init_base, init_quote, init_price, support, grid_num=grid_num, fee=fee)
         assert params.price_interval == 10
 
+    # @pytest.mark.skip(reason="Only works by clicking the `Run Test` button in VSCode")
     def test_bot(self, mock_bitbank):
         init_price = 10000
         init_quote = 700
