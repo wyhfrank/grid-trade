@@ -250,14 +250,12 @@ class GridBot:
                     counter[order.side.value] += 1
                     self.notify_order_traded(order)
                 else:
-                    counter['unknown'] += 1
-                    self.traded_count['unknown'] += 1
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 oid = order_data['order_id']
                 # Force cancel the order
                 self.om.order_force_cancelled(order_id=oid)
-                msg = f"Order possibly failed during creation or cancelled by the uesr: {oid}"
+                msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
                 logger.warning(msg)
                 # self.notify_error(msg) # This will be spamming
 
@@ -286,8 +284,7 @@ class GridBot:
 
         logger.info(f"Order(s) traded: ["
                     f"+{counter[OrderSide.Buy.value]}, "
-                    f"-{counter[OrderSide.Sell.value]}, "
-                    f"?{counter['unknown']}] "
+                    f"-{counter[OrderSide.Sell.value]}] "
                     f"Current price [{new_price}]"
                     )
         self.om.print_stacks()
