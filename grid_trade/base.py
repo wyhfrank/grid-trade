@@ -261,11 +261,6 @@ class GridBot:
         if counter.total <= 0:
             # No orders traded
             return
-
-        logger.info(f"Order(s) traded: ["
-                    f"+{counter[OrderSide.Buy.value]}, "
-                    f"-{counter[OrderSide.Sell.value]}, "
-                    f"?{counter['unknown']}]")
         if counter.total > 1:
             self.notify_error(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
         # mid_price = self.exchange.get_mid_price()
@@ -286,6 +281,13 @@ class GridBot:
         self._commit_create_orders()
         self.om.print_stacks()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
+
+        logger.info(f"Order(s) traded: ["
+                    f"+{counter[OrderSide.Buy.value]}, "
+                    f"-{counter[OrderSide.Sell.value]}, "
+                    f"?{counter['unknown']}] "
+                    f"Current price [{new_price}]"
+                    )
 
     #################
     # DB related
