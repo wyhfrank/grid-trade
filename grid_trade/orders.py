@@ -222,9 +222,7 @@ class OrderManager:
         def prepare_init(self, init_price):
             """ Init stack with limited numbers of orders, based on init_price """
             self.init_price = init_price
-            flag = Order.get_direction_flag(self.side, direction="outer")
-            for i in range(self.active_limit):
-                price = init_price + flag * self.price_interval * (i+1)
+            for price in self.get_price_grid(origin=init_price, direction='outer', start=1, count=self.active_limit):
                 self.prepare_order_at_price(price=price)
 
         def prepare_order_at_price(self, price):
@@ -232,7 +230,7 @@ class OrderManager:
                     user=self.om.user, exchange=self.om.exchange, db=self.om.db)
             self._orders.append(o)            
         
-        def get_price_grid(self, origin, direction='outer', count=None):
+        def get_price_grid(self, origin, direction='outer', start=0, count=None):
             """ Returns a generator of `count` prices on grid, starting from `origin`, towards `direction`, 
                 If count is None, size is limited to `self.capacity`
                 
@@ -253,7 +251,7 @@ class OrderManager:
             origin_on_grid = round_func(distance / self.price_interval) * self.price_interval + self.init_price
             
             length = count if count else self.capacity
-            for i in range(length):
+            for i in range(start, length + start):
                 price = origin_on_grid + flag * self.price_interval * i
                 yield price
         
@@ -294,7 +292,6 @@ class OrderManager:
                 # self.to_ideal_size(init_price=new_price)
                 price = list(self.get_price_grid(origin=new_price, direction='outer', count=1))[0]
                 self.prepare_order_at_price(price)
-                pass
             else:
                 price_diff = new_price - self.best_order.price
                 if self.side == OrderSide.Sell:
@@ -315,8 +312,8 @@ class OrderManager:
             if self.best_order:
                 logger.debug(f"Filling {count} order(s) in [{self.side.value}] stack towards {direction}")
                 current_best_price = self.best_order.price
-                # Since the current_best_price is on the grid, we need to skip it by using [1:]
-                prices = list(self.get_price_grid(current_best_price, direction=direction, count=count+1))[1:]
+                # Since the current_best_price is on the grid, we need to skip it by setting start=1
+                prices = list(self.get_price_grid(current_best_price, direction=direction, start=1, count=count))
                 for price in prices:
                     self.prepare_order_at_price(price=price)
                 self.sort()

@@ -41,6 +41,7 @@ class TestOrderStack:
 
         assert len(stack.all_orders) == 3
         assert stack.best_order.price == 9900
+        assert [o.price for o in stack.all_orders] == [9900, 9800, 9700]
         assert list(stack.get_price_grid(10000, direction='outer', count=3)) == [10000, 9900, 9800]
         assert list(stack.get_price_grid(10000, direction='inner', count=3)) == [10000, 10100, 10200]
         assert list(stack.get_price_grid(10002, direction='outer', count=3)) == [10000, 9900, 9800]
