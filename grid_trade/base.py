@@ -282,7 +282,6 @@ class GridBot:
         self.om.balance_stacks(new_price=new_price)
         self._commit_cancel_orders()
         self._commit_create_orders()
-        self.om.print_stacks()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
 
         logger.info(f"Order(s) traded: ["
@@ -291,6 +290,7 @@ class GridBot:
                     f"?{counter['unknown']}] "
                     f"Current price [{new_price}]"
                     )
+        self.om.print_stacks()
 
     #################
     # DB related
