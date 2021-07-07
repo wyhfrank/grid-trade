@@ -20,6 +20,7 @@ from notification import Discord
 
 logger = logging.getLogger(__name__)
 
+
 def main():
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
@@ -27,15 +28,19 @@ def main():
         config_file = './configs/config.yml'
     run_grid_bot(config_file)
 
+
 def run_grid_bot(config_file):
+    config = read_config(fn=config_file)
+    config_logging(config.get('logging', None))
+    
+    logger.info(f"Version: {__version__}")
+
     fsm = None
     try:
         fsm = FireStoreManager()
     except ValueError as e:
         logger.error("FireStoreManager cannot be initialized due to: ", e)
-    config = read_config(fn=config_file)
 
-    config_logging(config.get('logging', None))
 
     api_key = config['api']['key']
     api_secret = config['api']['secret']
@@ -108,5 +113,4 @@ def run_grid_bot(config_file):
 
 
 if __name__ == "__main__":
-    print(f"Version: {__version__}")
     main()
