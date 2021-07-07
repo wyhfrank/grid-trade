@@ -6,7 +6,6 @@
 4. Calculate statistics and send notifications: earn rate, yearly earn rate
 """
 
-__version__ = '0.0.1'
 
 import sys
 import time
@@ -32,8 +31,6 @@ def main():
 def run_grid_bot(config_file):
     config = read_config(fn=config_file)
     config_logging(config.get('logging', None))
-    
-    logger.info(f"Version: {__version__}")
 
     fsm = None
     try:
