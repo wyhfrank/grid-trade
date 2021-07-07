@@ -138,12 +138,12 @@ class TestGridBot:
         self.check_ids(bot, [1, 0, 2, 3])
         
         bot.om.balance_threshold = 2
-        bot.sync_order_status()
+        bot.sync_and_adjust()
         self.check_sides(bot, 2, 2)
         self.check_prices(bot, [9900, 10000, 10200, 10300])
         self.check_ids(bot, [0, 4, 3, 5])
 
-        bot.sync_order_status()
+        bot.sync_and_adjust()
         self.check_sides(bot, 2, 2)
         self.check_prices(bot, [10000, 10100, 10300, 10400])
         # 0 4 . 3 5
@@ -153,7 +153,7 @@ class TestGridBot:
         #   7 6 _.5 8
         self.check_ids(bot, [7, 6, 5, 8])
 
-        bot.sync_order_status()
+        bot.sync_and_adjust()
         self.check_sides(bot, 3, 2)
         self.check_prices(bot, [10100, 10200, 10300, 10500, 10600])
         # 7 6 . 5 8

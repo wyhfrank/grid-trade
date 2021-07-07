@@ -87,7 +87,7 @@ def run_grid_bot(config_file):
                     break
                 
                 try:
-                    bot.sync_order_status()
+                    bot.sync_and_adjust()
                 except requests.exceptions.ConnectionError as e:
                     discord.error(e)
 

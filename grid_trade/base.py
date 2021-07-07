@@ -226,8 +226,31 @@ class GridBot:
         self.status = BotStatus.Stopped
         self.update_bot_info_to_db()
         self.notify_info(f"GridBot (`{self.uid}`) stopped.")
-    
-    def sync_order_status(self):
+
+    def sync_and_adjust(self):
+        orders_data = self._retrieve_orders_data()
+        # print(f"orders_data: {orders_data}")
+        counter = self._sync_order_status(orders_data=orders_data)
+
+        if counter.total <= 0:
+            # No orders traded
+            return
+        if counter.total > 1:
+            self.notify_error(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
+
+        new_price = self._adjust_orders_to_current_price()
+        if not new_price:
+            return
+        
+        logger.info(f"Order(s) traded: ["
+                    f"+{counter[OrderSide.Buy.value]}, "
+                    f"-{counter[OrderSide.Sell.value]}] "
+                    f"Current price [{new_price}]"
+                    )
+        self.om.print_stacks()
+
+    def _retrieve_orders_data(self):
+        orders_data = []
         order_ids = self.om.active_order_ids
         try:
             orders_data = self.exchange.get_orders_data(order_ids=order_ids)
@@ -235,8 +258,9 @@ class GridBot:
             logger.error(f"Known error during retrievning orders: {e}")
         except Exception as e:
             self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")
-            return
-        # print(f"orders_data: {orders_data}")
+        return orders_data
+
+    def _sync_order_status(self, orders_data):
         counter = DefaultCounter()
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
@@ -262,12 +286,9 @@ class GridBot:
                 msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
                 logger.warning(msg)
                 # self.notify_error(msg) # This will be spamming
+        return counter
 
-        if counter.total <= 0:
-            # No orders traded
-            return
-        if counter.total > 1:
-            self.notify_error(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
+    def  _adjust_orders_to_current_price(self):
         # mid_price = self.exchange.get_mid_price()
         price_info = self.exchange.get_latest_prices()
         new_price = price_info['price']
@@ -285,13 +306,7 @@ class GridBot:
         self._commit_cancel_orders()
         self._commit_create_orders()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
-
-        logger.info(f"Order(s) traded: ["
-                    f"+{counter[OrderSide.Buy.value]}, "
-                    f"-{counter[OrderSide.Sell.value]}] "
-                    f"Current price [{new_price}]"
-                    )
-        self.om.print_stacks()
+        return new_price
 
     #################
     # DB related
