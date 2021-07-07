@@ -32,12 +32,7 @@ def run_grid_bot(config_file):
     config = read_config(fn=config_file)
     config_logging(config.get('logging', None))
 
-    fsm = None
-    try:
-        fsm = FireStoreManager()
-    except ValueError as e:
-        logger.error("FireStoreManager cannot be initialized due to: ", e)
-
+    fsm = setup_fsm(config=config)
 
     api_key = config['api']['key']
     api_secret = config['api']['secret']
@@ -107,6 +102,21 @@ def run_grid_bot(config_file):
     finally:
         if bot:
             bot.cancel_and_stop()
+
+
+def setup_fsm(config):
+    db_config = config.get('db')
+    firestore_config_file = db_config.get('db') if db_config else None
+    
+    fsm = None
+    if firestore_config_file:
+        try:
+            fsm = FireStoreManager(config_file=firestore_config_file)
+        except ValueError as e:
+            logger.error("FireStoreManager cannot be initialized due to: ", e)
+    else:
+        logger.warning(f"FireStoreManager is not configured. Running without it.")
+    return fsm
 
 
 if __name__ == "__main__":

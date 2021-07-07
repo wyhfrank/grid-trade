@@ -21,3 +21,7 @@ discord:
 
 logging:
   level: INFO
+
+
+db:
+  firestore: /pat/to/serviceAccountKey.json
