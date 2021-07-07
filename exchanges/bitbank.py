@@ -84,7 +84,8 @@ class Bitbank(Exchange):
     fee = -0.002
     # Known exceptions that does not impact too much on the process
     KnownExceptions = (requests.exceptions.SSLError, 
-                    requests.exceptions.ConnectionResetError) 
+                    # requests.exceptions.ConnectionError
+                    ) 
 
     class OrderStatus(Enum):
         # UNFILLED, PARTIALLY_FILLED, FULLY_FILLED, CANCELED_UNFILLED, CANCELED_PARTIALLY_FILLED
@@ -151,6 +152,8 @@ class Bitbank(Exchange):
         # print("Response of create order:", order_data)
 
         if self.is_order_cancelled(order_data=order_data):
+            # It seems that the reponse data of this request always says that the order 
+            #   is created successfully (UNFILLED)
             raise self.InvalidPriceError()
 
         fields_to_update = ['order_id', 'ordered_at']        
