@@ -371,13 +371,22 @@ class GridBot:
         if len(self.om.orders_to_cancel) <= 0:
             # print('Nothing to cancel')
             return
-        order_ids = [o.order_id for o in self.om.orders_to_cancel]
+        # Create a map of order_id => order
+        orders_map = {o.order_id: o for o in self.om.orders_to_cancel}
         try:
-            self.exchange.cancel_orders(order_ids)
+            orders_data = self.exchange.cancel_orders(orders_map.keys())
+            for od in orders_data:
+                oid = od['order_id']
+                order = orders_map.get(oid, None)
+                if order:
+                    if self.exchange.is_order_cancelled(order_data=od):
+                        self.om.order_cancel_ok(order=order)
+                    else:
+                        self.notify_error(f"Requested to cancel the order but it is still active in the exchange: {od}")
+                else:
+                    self.notify_error(f"The exchange {self.exchange} returned an irrelevant order data during cancellation: {od}")
         except Exception as e:
-            self.notify_error(f"Cancel orders failed in {self.exchange} for orders: {order_ids}")
-        for o in self.om.orders_to_cancel:
-            self.om.order_cancel_ok(order=o)
+            self.notify_error(f"Cancel orders failed in {self.exchange} for orders: {orders_map.keys()}")
 
     def _commit_create_orders(self):
         for o in self.om.orders_to_create:
