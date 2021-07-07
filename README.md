@@ -14,6 +14,8 @@ make run
 
 ## TODO
 
+- [ ] Better way of refilling orders
+  - Current price may go up and down so fast (within one sync) that orders were not created properly
 - [x] Bug: orders are not refilled properly
 - [x] Bug: duplicate orders exist
 - [x] Format prices for orders and params (remove floating point)
