@@ -211,6 +211,7 @@ class GridBot:
                             )
         self.om.init_stacks(init_price=param.init_price)
         self._commit_create_orders()
+        self.om.print_stacks()
 
     def cancel_and_stop(self):
         """ Cancel all orders and stop the bot. """
