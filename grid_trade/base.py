@@ -7,10 +7,11 @@ import uuid
 from typing import Iterable
 from enum import Enum
 from collections import defaultdict
-from grid_trade.orders import Order, OrderManager, OrderSide
+from grid_trade.orders import Order, OrderManager, OrderSide, OrderCounter
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
-from utils import DefaultCounter, init_formatted_properties
+from utils import init_formatted_properties
+
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +190,7 @@ class GridBot:
         self.started_at = started_at
         self.stopped_at = stopped_at
         self.latest_price = None
-        self.traded_count = defaultdict(int)
+        self.traded_count = OrderCounter()
 
     #################
     # Core logic
@@ -243,9 +244,7 @@ class GridBot:
         if not new_price:
             return
         
-        logger.info(f"Order(s) traded: ["
-                    f"+{counter[OrderSide.Buy.value]}, "
-                    f"-{counter[OrderSide.Sell.value]}] "
+        logger.info(f"Order(s) traded: {counter.preview} "
                     f"Current price [{new_price}]"
                     )
         self.om.print_stacks()
@@ -262,7 +261,7 @@ class GridBot:
         return orders_data
 
     def _sync_order_status(self, orders_data):
-        counter = DefaultCounter()
+        counter = OrderCounter()
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
                 oid = order_data['order_id']
@@ -275,8 +274,7 @@ class GridBot:
                 self.om.order_traded(order_id=oid)
 
                 if order:
-                    self.traded_count[order.side.value] += 1
-                    counter[order.side.value] += 1
+                    counter.increase(order.side)
                     self.notify_order_traded(order)
                 else:
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
@@ -287,6 +285,7 @@ class GridBot:
                 msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
                 logger.warning(msg)
                 # self.notify_error(msg) # This will be spamming
+        self.traded_count.merge(counter)
         return counter
 
     def  _adjust_orders_to_current_price(self):
@@ -356,13 +355,9 @@ class GridBot:
             return None
 
     @classmethod
-    def format_order_traded(cls, order: Order, traded_count: dict):
-        current_side = 0
-        total_count = 0
-        for k, v in traded_count.items():
-            if k == order.side.value:
-                current_side = v
-            total_count += v
+    def format_order_traded(cls, order: Order, traded_count: OrderCounter):
+        current_side = traded_count.total_of(order.side)
+        total_count = traded_count.total
         return f"#{total_count}. {order.short_markdown}. ({order.side.value} #{current_side})"
 
     #################

@@ -1,9 +1,11 @@
 import sys
 sys.path.append('.')
 
+from enum import Enum
+from functools import reduce
+from collections import defaultdict
 import math
 import logging
-from enum import Enum
 from utils import init_formatted_properties, setup_logging
 
 logger = logging.getLogger(__name__)
@@ -542,6 +544,37 @@ class OrderManager:
             stack_to_shrink.shrink_outer(delta)
 
 
+##################
+# Order counter
+class OrderCounter(defaultdict):
+    def __init__(self, *args, **kwargs):
+        return super().__init__(int, *args, **kwargs)
+
+    def increase(self, side: OrderSide, number=1):
+        key = side.value if isinstance(side, OrderSide) else "unknown"
+        self[key] += number
+
+    @property
+    def total(self):
+        if self.values():
+            return reduce(lambda x,y: x+y, self.values())
+        else:
+            return 0
+
+    def total_of(self, side: OrderSide):
+        return self[side.value]
+    
+    def merge(self, other: dict):
+        if not other:
+            return
+        for k, v in other.items():
+            self[k] += v
+
+    @property
+    def preview(self):
+        return "[+{}, -{}]".format(self[OrderSide.Buy.value], self[OrderSide.Sell.value])
+
+
 init_formatted_properties(Order, Order.fields_to_format)
 
 
@@ -563,7 +596,6 @@ def test_order():
     print(o2)
 
     print(o1.short_markdown)
-
 
 
 def test_om():

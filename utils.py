@@ -1,5 +1,3 @@
-from collections import defaultdict
-from functools import reduce
 import os
 import logging
 import logging.handlers
@@ -129,16 +127,6 @@ def config_logging(logging_config):
     setup_logging(log_file_path=file_path, backup_count=backup_count)
 
 
-class DefaultCounter(defaultdict):
-    def __init__(self, *args, **kwargs):
-        return super().__init__(int, *args, **kwargs)
-
-    @property
-    def total(self):
-        if self.values():
-            return reduce(lambda x,y: x+y, self.values())
-        else:
-            return 0
 
 #################
 # Tests
