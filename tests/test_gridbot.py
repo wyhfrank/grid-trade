@@ -7,12 +7,14 @@ import requests
 import pytest
 import python_bitbankcc
 from grid_trade.base import GridBot
+from grid_trade.orders import Order, OrderSide
 from exchanges import Bitbank
 import logging
 from utils import setup_logging
 
 # Hmmm, logging not working in tests?
-setup_logging(level=logging.DEBUG)
+setup_logging()
+logger = logging.getLogger(__name__)
 
 OrderStatus = Bitbank.OrderStatus
 
@@ -108,6 +110,43 @@ class TestGridBot:
 
         params = GridBot.Parameter.calc_grid_params_by_support(init_base, init_quote, init_price, support, grid_num=grid_num, fee=fee)
         assert params.price_interval == 10
+    
+    def test_irregular_price(self):
+        order_price = 100
+        amount = 0.1
+        side = OrderSide.Buy
+        price_info = {'price': 90, 'best_bid': 50, 'best_ask': 200}
+
+        o = Order(price=order_price, amount=amount, side=side, pair='')
+
+        price_info['price'] = 90
+        res = GridBot._check_irregular_price(o, price_info=price_info)
+        assert not res
+
+        price_info['price'] = 100
+        res = GridBot._check_irregular_price(o, price_info=price_info)
+        assert not res
+
+        price_info['price'] = 120
+        res = GridBot._check_irregular_price(o, price_info=price_info)
+        assert 'lower' in res and '[+20]' in res
+        assert '[50 ~ 200]' in res
+
+        side = OrderSide.Sell
+        o = Order(price=order_price, amount=amount, side=side, pair='')
+
+        price_info['price'] = 120
+        res = GridBot._check_irregular_price(o, price_info=price_info)
+        assert not res
+
+        price_info['price'] = 100
+        res = GridBot._check_irregular_price(o, price_info=price_info)
+        assert not res
+
+        price_info['price'] = 80
+        res = GridBot._check_irregular_price(o, price_info=price_info)
+        assert 'higher' in res and '[-20]' in res
+
 
     @classmethod
     def create_bot(cls, max_order_count=4):
@@ -131,7 +170,7 @@ class TestGridBot:
         return bot, param, additional
 
 
-    # @pytest.mark.skip(reason="Only works by clicking the `Run Test` button in VSCode")
+    @pytest.mark.skip(reason="Only works by clicking the `Run Test` button in VSCode")
     def test_bot(self, mock_bitbank):
         bot, param, additional = self.create_bot(max_order_count = 4)
         

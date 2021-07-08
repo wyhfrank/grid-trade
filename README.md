@@ -14,9 +14,11 @@ make run
 
 ## TODO
 
+- [ ] Log the full lifecycle of an order (creation -> traded -> removed)
 - [x] Add option to output logs into files
 - [ ] Better way of refilling orders
   - Current price may go up and down so fast (within one sync) that orders were not created properly
+  - [x] Detect and log such situations
 - [x] Bug: orders are not refilled properly
 - [x] Bug: duplicate orders exist
 - [x] Format prices for orders and params (remove floating point)

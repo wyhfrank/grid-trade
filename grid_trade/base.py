@@ -230,9 +230,11 @@ class GridBot:
         self.notify_info(f"GridBot v{__version__} (`{self.uid}`) stopped.")
 
     def sync_and_adjust(self):
+        price_info = self.exchange.get_latest_prices()
+
         orders_data = self._retrieve_orders_data()
         # print(f"orders_data: {orders_data}")
-        counter = self._sync_order_status(orders_data=orders_data)
+        counter = self._sync_order_status(orders_data=orders_data, price_info=price_info)
 
         if counter.total <= 0:
             # No orders traded
@@ -260,7 +262,7 @@ class GridBot:
             self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")
         return orders_data
 
-    def _sync_order_status(self, orders_data):
+    def _sync_order_status(self, orders_data, price_info):
         counter = OrderCounter()
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
@@ -276,6 +278,9 @@ class GridBot:
                 if order:
                     counter.increase(order.side)
                     self.notify_order_traded(order)
+                    irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
+                    if irregular_msg:
+                        self.notify_error(message=irregular_msg)
                 else:
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
@@ -288,9 +293,8 @@ class GridBot:
         self.traded_count.merge(counter)
         return counter
 
-    def  _adjust_orders_to_current_price(self):
+    def  _adjust_orders_to_current_price(self, price_info):
         # mid_price = self.exchange.get_mid_price()
-        price_info = self.exchange.get_latest_prices()
         new_price = price_info['price']
         self.latest_price = new_price
         if new_price > self.param.highest_price or new_price < self.param.lowest_price:
@@ -307,6 +311,30 @@ class GridBot:
         self._commit_create_orders()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
         return new_price
+    
+    @staticmethod
+    def _check_irregular_price(order: Order, price_info):
+        """ Check whether the prcice jumpped back """
+        new_price = price_info['price']
+        diff = new_price - order.price
+        irregular = False
+        if order.side == OrderSide.Buy and diff > 0:
+            gt_lt = "lower"
+            irregular = True
+        elif order.side == OrderSide.Sell and diff < 0:
+            gt_lt = "higher"
+            irregular = True                
+                
+        if irregular:
+            flag = "+" if diff > 0 else ""
+            diff_s = flag + str(diff)
+            best_bid = price_info['best_bid']
+            best_ask = price_info['best_ask']
+            
+            return f"New price should be [{gt_lt}] than the [{order.side.value}] order " +\
+                    f"@[{order.price_s}], however it is [{diff_s}] = {new_price}. " +\
+                    f"Spread: [{best_bid} ~ {best_ask}]."
+        return False
 
     #################
     # DB related
