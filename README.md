@@ -14,6 +14,7 @@ make run
 
 ## TODO
 
+- [x] Add option to output logs into files
 - [ ] Better way of refilling orders
   - Current price may go up and down so fast (within one sync) that orders were not created properly
 - [x] Bug: orders are not refilled properly

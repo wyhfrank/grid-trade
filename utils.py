@@ -2,6 +2,7 @@ from collections import defaultdict
 from functools import reduce
 import os
 import logging
+import logging.handlers
 from datetime import datetime
 import asyncio
 import yaml
@@ -57,7 +58,7 @@ def create_pine_script(df_history, side_key='side', cost_key='cost', time_key='e
     return "\n".join(lines)
 
 #############################
-# Dynamiccally add properties
+# Dynamically add properties
 def init_formatted_properties(cls, fields_to_format):
     """ For each of the fields in `fields_to_format` add a new property to the cls
             that formats the float value into proper string
@@ -91,16 +92,40 @@ def init_formatted_properties(cls, fields_to_format):
         setattr(cls, field + '_s', get_formatter(field=field, precision=precision, is_ratio=is_ratio))
 
 
-def setup_logging(level=logging.INFO):
-    logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
-                        datefmt='%Y-%m-%d %H:%M:%S')
+
+#############################
+# Logging
+def  setup_logging(log_file_path=None, backup_count=30, basic_level=logging.DEBUG, 
+                    stream_level=logging.INFO,  file_level=logging.DEBUG):
+    format_str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    formatter = logging.Formatter(format_str)
+
+    handlers = []
+    sh = logging.StreamHandler()
+    sh.setLevel(stream_level)
+    sh.setFormatter(formatter)
+    handlers.append(sh)
+
+    if log_file_path:
+        fh = logging.handlers.TimedRotatingFileHandler(
+            filename=log_file_path, when='midnight', backupCount=backup_count)
+        fh.setFormatter(formatter)
+        fh.setLevel(file_level)
+        handlers.append(fh)
+
+    logging.basicConfig(level=basic_level, handlers=handlers)
 
 
 def config_logging(logging_config):
+    def get_level(name, default):
+        return getattr(logging, name) if hasattr(logging, name) else default
+
     c = logging_config if logging_config else {}
-    level_s =c.get('level', 'INFO')
-    level = getattr(logging, level_s) if hasattr(logging, level_s) else logging.INFO
-    setup_logging(level=level)
+    
+    file_config = c.get('file', {})
+    file_path = file_config.get('path', None)
+
+    setup_logging(log_file_path=file_path)
 
 
 class DefaultCounter(defaultdict):
