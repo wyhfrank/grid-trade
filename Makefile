@@ -11,4 +11,7 @@ build_old:
 	docker build . -t gridbot
 
 run_old:
-	docker run --rm --name gridbot -v `pwd`/configs:/app/configs gridbot python main.py configs/config.yml
+	docker run --rm --name gridbot \
+		-v `pwd`/configs:/app/configs \
+		-v `pwd`/logs:/app/logs \
+		gridbot python main.py configs/config.yml
