@@ -20,8 +20,9 @@ discord:
   error: YOUR_ERR_WEBHOOK
 
 logging:
-  level: INFO
-
+  file:
+    path: ./logs/app.log
+    backup_count: 10
 
 db:
   firestore: /pat/to/serviceAccountKey.json

@@ -124,8 +124,9 @@ def config_logging(logging_config):
     
     file_config = c.get('file', {})
     file_path = file_config.get('path', None)
+    backup_count = file_config.get('backup_count', 10)
 
-    setup_logging(log_file_path=file_path)
+    setup_logging(log_file_path=file_path, backup_count=backup_count)
 
 
 class DefaultCounter(defaultdict):
