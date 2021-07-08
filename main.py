@@ -55,6 +55,8 @@ def run_grid_bot(config_file):
     
     ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret, max_order_count=order_limit)
 
+    bot = None
+
     additional_info = {
         'pair': pair,
         'user': user,
