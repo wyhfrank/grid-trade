@@ -15,7 +15,7 @@ from utils import init_formatted_properties
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 class BotStatus(Enum):
@@ -330,7 +330,7 @@ class GridBot:
             diff_s = flag + str(diff)
             best_bid = price_info['best_bid']
             best_ask = price_info['best_ask']
-            
+
             return f"New price should be [{gt_lt}] than the [{order.side.value}] order " +\
                     f"@[{order.price_s}], however it is [{diff_s}] = {new_price}. " +\
                     f"Spread: [{best_bid} ~ {best_ask}]."
