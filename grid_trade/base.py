@@ -324,6 +324,7 @@ class GridBot:
         best_ask = price_info['best_ask']
         diff = new_price - order.price
         irregular = False
+        other_side_creatable = True
         
         if order.side == OrderSide.Buy and diff > 0:
             gt_lt = "lower"
