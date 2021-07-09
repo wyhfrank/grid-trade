@@ -277,6 +277,7 @@ class GridBot:
 
                 if order:
                     counter.increase(order.side)
+                    self.traded_count.increase(order.side) # This need to be updated imediately right before the notification
                     self.notify_order_traded(order)
                     irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
                     if irregular_msg:
@@ -290,7 +291,6 @@ class GridBot:
                 msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
                 logger.warning(msg)
                 # self.notify_error(msg) # This will be spamming
-        self.traded_count.merge(counter)
         return counter
 
     def  _adjust_orders_to_current_price(self, price_info):

@@ -14,6 +14,8 @@ make run
 
 ## TODO
 
+- [ ] Irregular price notification is overwhelming
+- [x] Bug in notifying the counter: total counter is not updated instantly
 - [ ] Log the full lifecycle of an order (creation -> traded -> removed)
 - [x] Add option to output logs into files
 - [ ] Better way of refilling orders
