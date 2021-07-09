@@ -282,7 +282,7 @@ class GridBot:
                 if order:
                     counter.increase(order.side)
                     self.traded_count.increase(order.side) # This need to be updated imediately right before the notification
-                    batch_info = f"[{counter.total}/{total_traded_this_sync}]"
+                    batch_info = f"[{counter.total}/{total_traded_this_sync}]" if total_traded_this_sync > 1 else ""
                     self.notify_order_traded(order, more=batch_info)
                     irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
                     if irregular_msg:
