@@ -338,7 +338,9 @@ class GridBot:
             other_side_creatable = other_side_price <= best_ask
             irregular = True                
                 
-        if irregular:
+        # if irregular:
+        # Notify only when post_only orders cannot be created
+        if not other_side_creatable:
             flag = "+" if diff > 0 else ""
             diff_s = flag + str(diff)
             creatable = "can" if other_side_creatable else "**CANNOT**"
