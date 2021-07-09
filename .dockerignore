@@ -7,3 +7,4 @@ nohup.out
 .pytest_cache/
 data/
 logs/
+dev-notes/
