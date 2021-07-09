@@ -263,6 +263,7 @@ class GridBot:
         return orders_data
 
     def _sync_order_status(self, orders_data, price_info):
+        total_traded_this_sync = len(filter(self.exchange.is_order_fullyfilled, orders_data))
         counter = OrderCounter()
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
@@ -278,7 +279,8 @@ class GridBot:
                 if order:
                     counter.increase(order.side)
                     self.traded_count.increase(order.side) # This need to be updated imediately right before the notification
-                    self.notify_order_traded(order)
+                    batch_info = f"[{counter.total}/{total_traded_this_sync}]"
+                    self.notify_order_traded(order, more=batch_info)
                     irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
                     if irregular_msg:
                         self.notify_error(message=irregular_msg)
@@ -376,11 +378,11 @@ class GridBot:
         if self.notifier:
             self.notifier.error(message, logger=logger)
     
-    def notify_order_traded(self, order):
+    def notify_order_traded(self, order, more=""):
         if self.notifier:
             side = 'buy' if order.side==OrderSide.Buy else 'sell'
             message = self.format_order_traded(order=order, traded_count=self.traded_count)
-            self.notifier.send_trade_msg(message, side)
+            self.notifier.send_trade_msg(message + more, side)
 
     @property
     def notifier(self):
