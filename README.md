@@ -14,6 +14,7 @@ make run
 
 ## TODO
 
+- [ ] Bug: duplicate orders exist
 - [ ] Irregular price notification is overwhelming
 - [x] Bug in notifying the counter: total counter is not updated instantly
 - [ ] Log the full lifecycle of an order (creation -> traded -> removed)
@@ -22,7 +23,6 @@ make run
   - Current price may go up and down so fast (within one sync) that orders were not created properly
   - [x] Detect and log such situations
 - [x] Bug: orders are not refilled properly
-- [x] Bug: duplicate orders exist
 - [x] Format prices for orders and params (remove floating point)
 - [ ] Reset the bot only when price changed over a certain degree (instead of doing this by time interval)
 - [ ] Calculate earn rate
