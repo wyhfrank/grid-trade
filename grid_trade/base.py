@@ -312,28 +312,36 @@ class GridBot:
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
         return new_price
     
-    @staticmethod
-    def _check_irregular_price(order: Order, price_info):
+    def _check_irregular_price(self, order: Order, price_info):
         """ Check whether the prcice jumpped back """
         new_price = price_info['price']
+        best_bid = price_info['best_bid']
+        best_ask = price_info['best_ask']
         diff = new_price - order.price
         irregular = False
+        
         if order.side == OrderSide.Buy and diff > 0:
             gt_lt = "lower"
+            other_side = OrderSide.Sell
+            other_side_price = order.price + self.om.price_interval
+            other_side_creatable = other_side_price >= best_bid
             irregular = True
         elif order.side == OrderSide.Sell and diff < 0:
             gt_lt = "higher"
+            other_side = OrderSide.Buy
+            other_side_price = order.price - self.om.price_interval
+            other_side_creatable = other_side_price <= best_ask
             irregular = True                
                 
         if irregular:
             flag = "+" if diff > 0 else ""
             diff_s = flag + str(diff)
-            best_bid = price_info['best_bid']
-            best_ask = price_info['best_ask']
+            creatable = "can" if other_side_creatable else "**CANNOT**"
 
             return f"New price should be [{gt_lt}] than the [{order.side.value}] order " +\
-                    f"@[{order.price_s}], however it is [{diff_s}] = {new_price}. " +\
-                    f"Spread: [{best_bid} ~ {best_ask}]."
+                    f"@[{order.price}], however it is [{diff_s}] = [{new_price}]\n" +\
+                    f"Spread: [{best_bid} ~ {best_ask}]. " +\
+                    f"Opposite {other_side.value} order {creatable} be created @[{other_side_price}]."
         return False
 
     #################
