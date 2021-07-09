@@ -239,8 +239,11 @@ class GridBot:
         if counter.total <= 0:
             # No orders traded
             return
+
         if counter.total > 1:
-            logger.warning(f"Care: more than 1 orders are traded during one sync: [{counter.total}] orders")
+            # logger.warning(f"Care: more than 1 orders are traded during one sync: {counter.preview}")
+            if counter.both_sides:
+                self.notify_error(f"Oders on both sides are traded during one sync: {counter.preview}")
 
         new_price = self._adjust_orders_to_current_price(price_info=price_info)
         if not new_price:

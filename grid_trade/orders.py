@@ -561,6 +561,10 @@ class OrderCounter(defaultdict):
         else:
             return 0
 
+    @property
+    def both_sides(self):
+        return self.total_of(OrderSide.Buy) > 0 and self.total_of(OrderSide.Sell) > 0
+
     def total_of(self, side: OrderSide):
         return self[side.value]
     
