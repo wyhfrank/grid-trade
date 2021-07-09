@@ -266,7 +266,7 @@ class GridBot:
         return orders_data
 
     def _sync_order_status(self, orders_data, price_info):
-        total_traded_this_sync = len(filter(self.exchange.is_order_fullyfilled, orders_data))
+        total_traded_this_sync = len(list(filter(self.exchange.is_order_fullyfilled, orders_data)))
         counter = OrderCounter()
         for order_data in orders_data:
             if self.exchange.is_order_fullyfilled(order_data=order_data):
