@@ -77,6 +77,7 @@ class Order:
     def create_ok(self):
         if self.status == OrderStatus.ToCreate:
             self.status = OrderStatus.Created
+            logger.info(f"Order created: {self.short}")
             if self.db:
                 self.db.create_order(self.to_dict())
         else:
@@ -91,6 +92,8 @@ class Order:
     def cancel_ok(self, force=False):
         if self.status == OrderStatus.ToCancel or force:
             self.status = OrderStatus.Cancelled
+            force_tag = "force" if force else ""
+            logger.info(f"Order {force_tag} cancelled: {self.short}")
             self.save_status_to_db()
         else:
             self._print_error_message(exp_status='ToCancel', action='Cancelled')
@@ -104,6 +107,7 @@ class Order:
     def trade_ok(self):
         if self.status == OrderStatus.OnTraded:
             self.status = OrderStatus.Traded
+            logger.info(f"Order traded: {self.short}")
             self.save_status_to_db()
         else:
             self._print_error_message(exp_status='OnTraded', action='Traded')
@@ -168,6 +172,10 @@ class Order:
     @property
     def short_markdown(self) -> str:
         return f"{self.user} {self.side.value} {self.amount_s} {self.pair} @ **{self.price_s}**"
+
+    @property
+    def short(self) -> str:
+        return f"[{self.side.value}] {self.amount_s} @ {self.price_s}"
 
 
 class OrderManager:

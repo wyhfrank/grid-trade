@@ -317,9 +317,9 @@ class GridBot:
         # Balance the stacks if necessary
         self.om.balance_stacks()
 
+        self._commit_oders_traded()
         self._commit_cancel_orders()
         self._commit_create_orders()
-        self._commit_oders_traded()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
         return new_price
     

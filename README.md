@@ -15,11 +15,11 @@ make run
 ## TODO
 
 - [ ] Bug: duplicate orders exist
-- [ ] Irregular price notification is overwhelming
+- [x] Irregular price notification is overwhelming
 - [x] Bug in notifying the counter: total counter is not updated instantly
-- [ ] Log the full lifecycle of an order (creation -> traded -> removed)
+- [x] Log the full lifecycle of an order (creation -> traded / cancelled -> removed)
 - [x] Add option to output logs into files
-- [ ] Better way of refilling orders
+- [x] Better way of refilling orders
   - Current price may go up and down so fast (within one sync) that orders were not created properly
   - [x] Detect and log such situations
 - [x] Bug: orders are not refilled properly
