@@ -218,6 +218,11 @@ class GridBot:
 
     def cancel_and_stop(self):
         """ Cancel all orders and stop the bot. """
+
+        if not self.om:
+            logger.warning(f"Stopping a bot while it is not started yet. Skip.")
+            return
+            
         order_ids = self.om.active_order_ids
         try:
             self.exchange.cancel_orders(order_ids)
