@@ -179,7 +179,6 @@ class Order:
 
 
 class OrderManager:
-    # TODO: handel special case where orders were cancel mannually during synchronizing
     class OrderStack:
         def __init__(self, om, side: OrderSide) -> None:
             self.om = om
