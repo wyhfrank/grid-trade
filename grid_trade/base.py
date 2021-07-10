@@ -16,7 +16,7 @@ from utils import init_formatted_properties
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 class BotStatus(Enum):
@@ -192,7 +192,7 @@ class GridBot:
 
         def __init__(self, param) -> None:
             self.param: GridBot.Parameter = param
-            
+
         # TODO: use the actual traded orders data
         #     self.data = defaultdict(lambda: defaultdict(list))
 
