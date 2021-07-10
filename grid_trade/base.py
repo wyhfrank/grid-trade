@@ -4,6 +4,7 @@ sys.path.append('.')
 import time
 import logging
 import uuid
+from collections import defaultdict
 from typing import Iterable
 from enum import Enum
 from grid_trade.mixins import FieldFormatMixin
@@ -160,23 +161,95 @@ class GridBot:
 
         def get_full_markdown_list(self) -> list:
             return [
-                f"Grid Number:     {self.grid_num}",
-                f"Unit Amount:     {self.unit_amount_s}",
-                f"Price Interval:  {self.price_interval_s}",
-                f"Init Price:      {self.init_price_s}",
-                f"Init Currency:   [{self.init_base_s} | {self.init_quote_s}]",
-                f"Unused Currency: [{self.unused_base_s} | {self.unused_quote_s}]",
-                f"Price Range:     [{self.lowest_price_s} ~ {self.highest_price_s}]",
-                f"Earn Rate:       [{self.lowest_earn_rate_per_grid_s} ~ {self.highest_earn_rate_per_grid_s}]",
+                ["Grid Number" ,     f"{self.grid_num}"],
+                ["Unit Amount" ,     f"{self.unit_amount_s}"],
+                ["Price Interval" ,  f"{self.price_interval_s}"],
+                ["Init Price" ,      f"{self.init_price_s}"],
+                ["Init Currency" ,   f"[{self.init_base_s} | {self.init_quote_s}]"],
+                ["Unused Currency" , f"[{self.unused_base_s} | {self.unused_quote_s}]"],
+                ["Price Range" ,     f"[{self.lowest_price_s} ~ {self.highest_price_s}]"],
+                ["Earn Rate" ,       f"[{self.lowest_earn_rate_per_grid_s} ~ {self.highest_earn_rate_per_grid_s}]"],
             ]
         
         @property
         def full_markdown(self) -> str:
-            return "\n".join(self.get_full_markdown_list())
+            max_len = max(map(lambda x: len(x[0]), self.get_full_markdown_list()))
+            return "\n".join(map(lambda x: "{} : {}".format(x[0].ljust(max_len), x[1]), self.get_full_markdown_list()))
         
         @property
         def short_markdown(self) -> str:
-            return ", ".join(self.get_full_markdown_list()[0:3])
+            return ", ".join(map(lambda x: "{}: {}".format(*x), self.get_full_markdown_list()[0:3]))
+
+    class ExecutionReport:
+        """ Calculate the following metrics
+                Actual Earning: the earn from the matched buy/sell pairs
+                Actual Earn Rate: the earn rate from the matched buy/sell pairs
+                Yearly Earn Rate: the estimated yearly earn rate without considering compound interest
+                Extra Hold Amount: the total amount of the unmatched orders
+                Extra Hold Cost: the total value of the unmatched orders
+                Avg Hold Price: the average cost/value of the extra unmatched buy/sell orders
+         """
+
+        def __init__(self, param) -> None:
+            self.param: GridBot.Parameter = param
+            
+        # TODO: use the actual traded orders data
+        #     self.data = defaultdict(lambda: defaultdict(list))
+
+        # def add_order(self, order: Order):
+        #     self.data[order.side][order.price].append(order)
+        
+        # def calc_value(self, side, amount_limit=None):
+        #     pass
+
+        @classmethod
+        def _to_markdown(cls, data: dict):
+            max_len = max(map(lambda x: len(x), data.keys()))
+            lines = []
+            for k, v in data.items():
+                if isinstance(v, list):
+                    value_str = "[{} ~ {}]".format(*v)
+                else:
+                    value_str = str(v)
+                line = "{key} : {value}".format(
+                    key=k.ljust(max_len),
+                    value=value_str
+                )
+                lines.append(line)
+            return "\n".join(lines)
+            
+        def from_order_counter(self, counter: OrderCounter, duration_hour):
+            def to_yearly(earn_rate, hour):
+                return earn_rate / hour * 24 * 365
+            buy_count = counter.total_of(OrderSide.Buy)
+            sell_count = counter.total_of(OrderSide.Sell)
+            matched = min(buy_count, sell_count)
+            extra_count = abs(buy_count > sell_count)
+            traded_value = self.param.unit_amount * self.param.init_price * matched
+            lowest_actual_earning = self.param.lowest_earn_rate_per_grid * traded_value
+            highest_actual_earning = self.param.highest_earn_rate_per_grid * traded_value
+            init_value = self.param.init_quote + self.param.init_base * self.param.init_price
+            lowest_earn_rate = lowest_actual_earning / init_value
+            highest_earn_rate = highest_actual_earning / init_value
+            lowest_yearly_earn_rate = to_yearly(lowest_earn_rate, hour=duration_hour)
+            highest_yearly_earn_rate = to_yearly(highest_actual_earning, hour=duration_hour)
+            
+            flag = 1 if sell_count > buy_count else -1
+            extra_side = "equal" if sell_count == buy_count else OrderSide.Sell if sell_count > buy_count else OrderSide.Buy
+            avg_hold_price = self.param.init_price + flag * (extra_count * 1) * self.param.price_interval / 2
+            extra_hold_amount = self.param.unit_amount * extra_count
+            extra_hold_cost = avg_hold_price * extra_hold_amount
+            data = {
+                'Actual Earning': [lowest_actual_earning, highest_actual_earning],
+                'Actual Earn Rate': [lowest_earn_rate, highest_earn_rate],
+                'Yearly Earn Rate': [lowest_yearly_earn_rate, highest_yearly_earn_rate],
+                'Extra Side': extra_side,
+                'Extra Host Amount': extra_hold_amount,
+                'Extra Host Cost': extra_hold_cost,
+                'Avg Hold Price': avg_hold_price,
+            }
+            return self._to_markdown(data)
+
 
     def __init__(self, exchange: Exchange = None, param=None, status=BotStatus.Created, 
                 started_at=None, stopped_at=None, uid=None) -> None:
@@ -192,6 +265,7 @@ class GridBot:
         self.stopped_at = stopped_at
         self.latest_price = None
         self.traded_count = OrderCounter()
+        self.execution_report = GridBot.ExecutionReport(param)        
 
     #################
     # Core logic
@@ -203,6 +277,7 @@ class GridBot:
 
         self.started_at = time.time()
         self.param = param
+        self.execution_report = GridBot.ExecutionReport(param)
         self.additional_info = additional_info
         self.status = BotStatus.Running
         self.save_bot_info_to_db()
@@ -230,10 +305,13 @@ class GridBot:
         except Exception as e:
             self.notify_error(f"Cancel orders failed for {self.exchange}. Please check manually!")
         self.om.cancel_all()
-        self.stopped_at = time.time()        
+        self.stopped_at = time.time()
         self.status = BotStatus.Stopped
         self.update_bot_info_to_db()
-        self.notify_info(f"GridBot v{__version__} (`{self.uid}`) stopped.")
+        duration_hour = (self.stopped_at - self.started_at) / (60 * 60)
+        report = self.execution_report.from_order_counter(self.traded_count, duration_hour=duration_hour)
+        self.notify_info(f"GridBot v{__version__} (`{self.uid}`) stopped with param:\n```\n{self.param.full_markdown}\n```" +\
+                        f"Execution Report:\n```{report}```")
 
     def sync_and_adjust(self):
         """ Sync the orders status from exchange and adjust the stacks (refill new orders, balance stacks etc.) """
