@@ -58,6 +58,7 @@ class GridBot:
             self.fee = fee
             self.unused_base = unused_base
             self.unused_quote = unused_quote
+            self.round_obj(self)  # Round up the fields defined in fields_to_format
         
         @property
         def lowest_price(self):
@@ -125,11 +126,11 @@ class GridBot:
             else:
                 unit_amount = ideal_unit_amount
                 unused_quote = init_quote - quote_needed
-            
+
             param = cls(unit_amount=unit_amount, price_interval=price_interval, init_price=init_price,
                         init_base=init_base, init_quote=init_quote, grid_num=grid_num, pair=pair, fee=fee,
                         unused_base=unused_base, unused_quote=unused_quote)
-            return param   
+            return param
 
         #############################
         # Serialiazation
@@ -222,7 +223,7 @@ class GridBot:
         if not self.om:
             logger.warning(f"Stopping a bot while it is not started yet. Skip.")
             return
-            
+
         order_ids = self.om.active_order_ids
         try:
             self.exchange.cancel_orders(order_ids)
@@ -496,19 +497,7 @@ init_formatted_properties(GridBot.Parameter)
 ###################
 # Tests
 ###################
-def test_param():
-    price_interval=5000.123456
-    grid_num=100
-    init_base = 0.123456
-    init_quote = 90000.123456
-    init_price = 257000.123456
-    fee = -0.002
-    pair = None
-    param = GridBot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                            price_interval=price_interval, grid_num=grid_num, pair=pair, fee=fee)
 
-    print(param.full_markdown)
-    print(param.short_markdown)
 
 
 def test_serialization():
