@@ -40,6 +40,9 @@ class TestOrderCounter:
 
 
 if __name__ == '__main__':
+    import os
+    from utils import setup_logging
+    log_file_path = os.path.basename(__file__) + '.log'
+    setup_logging(log_file_path='./logs/testing/' + log_file_path, backup_count=1)
     # https://stackoverflow.com/a/41616391/1938012
     retcode = pytest.main(['-x', __file__])
-    # retcode = pytest.main(['-x', 'tests/test_order_stack.py'])

@@ -4,12 +4,7 @@ import sys
 sys.path.append('.')
 
 import pytest
-from grid_trade.orders import OrderManager, OrderSide
-
-import logging
-from utils import setup_logging
-# Hmmm, logging not working in tests?
-setup_logging(level=logging.DEBUG)
+from grid_trade.orders import OrderManager, OrderSide, OrderStatus
 
 OrderStack = OrderManager.OrderStack
 
@@ -33,15 +28,15 @@ class TestOrderStack:
                         grid_num=grid_num,order_limit=order_limit, additional_info=additional_info)        
         return om
 
-    def test_buy(self):
+    def test_refill_orders_on_buy_stack(self):
         init_price = 10000
 
         stack = self.om.buy_stack
         stack.prepare_init(init_price=init_price)
 
         assert len(stack.all_orders) == 3
-        assert stack.best_order.price == 9900
-        assert stack.worst_order.price == 9700
+        assert stack.best_order_of_all.price == 9900
+        assert stack.worst_order_of_all.price == 9700
         assert [o.price for o in stack.all_orders] == [9900, 9800, 9700]
         
         assert list(stack.get_price_grid(10000, direction='outer', count=3)) == [10000, 9900, 9800]
@@ -58,15 +53,15 @@ class TestOrderStack:
         stack.refill_orders(direction='inner', count=2)
         assert [o.price for o in stack.all_orders] == [10200, 10100, 10000, 9900, 9800, 9700, 9600]
         
-    def test_sell(self):
+    def test_refill_orders_on_sell_stack(self):
         init_price = 10000
 
         stack = self.om.sell_stack
         stack.prepare_init(init_price=init_price)
 
         assert len(stack.all_orders) == 3
-        assert stack.best_order.price == 10100
-        assert stack.worst_order.price == 10300
+        assert stack.best_order_of_all.price == 10100
+        assert stack.worst_order_of_all.price == 10300
         assert [o.price for o in stack.all_orders] == [10100, 10200, 10300]
         
         assert list(stack.get_price_grid(10000, direction='outer', count=3)) == [10000, 10100, 10200]
@@ -84,8 +79,28 @@ class TestOrderStack:
         assert [o.price for o in stack.all_orders] == [9800, 9900, 10000, 10100, 10200, 10300, 10400]
         
 
+    def test_refill_stack_by_paring_on_sell_stack(self):
+        init_price = 10000
+
+        stack = self.om.sell_stack
+        stack.prepare_init(init_price=init_price)
+
+        buy_stack = self.om.buy_stack
+        buy_stack.prepare_init(init_price=init_price)
+
+        # stack.refill_stack_by_pairing(traded_orders=[buy_stack.best_order])
+        # assert [o.price for o in stack.all_orders] == [10000, 10100, 10200, 10300]
+        # assert stack.best_order.status == OrderStatus.ToCreate
+
+        filled_count = stack.refill_stack_by_pairing(traded_orders=buy_stack.all_orders)
+        assert [o.price for o in stack.all_orders] == [9800, 9900, 10000, 10100, 10200, 10300]
+        assert filled_count == 3
+
 
 if __name__ == '__main__':
+    import os
+    from utils import setup_logging
+    log_file_path = os.path.basename(__file__) + '.log'
+    setup_logging(log_file_path='./logs/testing/' + log_file_path, backup_count=1)
     # https://stackoverflow.com/a/41616391/1938012
     retcode = pytest.main(['-x', __file__])
-    # retcode = pytest.main(['-x', 'tests/test_order_stack.py'])
