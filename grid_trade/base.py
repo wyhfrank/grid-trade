@@ -6,7 +6,7 @@ import logging
 import uuid
 from typing import Iterable
 from enum import Enum
-from collections import defaultdict
+from grid_trade.mixins import FieldFormatMixin
 from grid_trade.orders import Order, OrderManager, OrderSide, OrderCounter
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
@@ -30,20 +30,20 @@ class GridBot:
         'status': BotStatus,
     }
 
-    class Parameter:
+    class Parameter(FieldFormatMixin):
         # A new property of `NAME_s` will be added for each of the `NAME` variables
         fields_to_format = {
-            'unit_amount': {},
-            'init_base': {},
-            'init_quote': {'precision': 0},
-            'init_price': {'precision': 0},
-            'price_interval': {'precision': 0},
-            'unused_base': {},
-            'unused_quote': {'precision': 0},
-            'lowest_price': {'precision': 0},
-            'highest_price': {'precision': 0},
-            'lowest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
-            'highest_earn_rate_per_grid': {'precision': 4, 'is_ratio': True},
+            'unit_amount': {'_type': 'amount'},
+            'init_base': {'_type': 'amount'},
+            'init_quote': {'precision': 0, '_type': 'price'},
+            'init_price': {'precision': 0, '_type': 'price'},
+            'price_interval': {'precision': 0, '_type': 'price'},
+            'unused_base': {'_type': 'amount'},
+            'unused_quote': {'precision': 0, '_type': 'price'},
+            'lowest_price': {'precision': 0, '_type': 'price'},
+            'highest_price': {'precision': 0, '_type': 'price'},
+            'lowest_earn_rate_per_grid': {'precision': 4, '_type': 'ratio'},
+            'highest_earn_rate_per_grid': {'precision': 4, '_type': 'ratio'},
         }
 
         def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price,
@@ -81,7 +81,7 @@ class GridBot:
         def lowest_earn_rate_per_grid(self):
             second_highest_price = self.init_price + (self.half_grid_num-1) * self.price_interval
             return self.price_interval / second_highest_price - 2 * self.fee
-        
+
         @classmethod
         def calc_grid_params_by_support(cls, init_base, init_quote, init_price, support, grid_num=100, pair=None, fee=0):
             """ Calculate the grid setup parameters by fixing the support line
@@ -485,7 +485,7 @@ class GridBot:
         return dest  
 
 
-init_formatted_properties(GridBot.Parameter, GridBot.Parameter.fields_to_format)
+init_formatted_properties(GridBot.Parameter)
 
 
 ###################

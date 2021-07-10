@@ -19,8 +19,7 @@ class TestBitbank:
         api_secret = config['api']['secret']
         pair = 'btc_jpy'
         self.bb = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)        
-        
-    @pytest.mark.skip
+
     def test_get_prices(self):
         info = self.bb.get_latest_prices()
 
@@ -33,11 +32,16 @@ class TestBitbank:
         }
         for k, v in fields_to_check.items():
             assert isinstance(info[k], v)
-    
+
     def test_basic_info(self):
         bb = self.bb
 
         to_check = {
+            None: {
+                'fee': -0.0002,
+                'price_digits': 0,
+                'amount_digits': 4,
+            },
             'btc_jpy': {
                 'fee': -0.0002,
                 'price_digits': 0,

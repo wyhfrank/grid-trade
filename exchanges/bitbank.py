@@ -139,7 +139,7 @@ class Bitbank(Exchange):
         quote_amount = self.parse_currency_amount(response=res, part='quote')
         return {'base_amount': base_amount, 'quote_amount': quote_amount}
 
-    def get_basic_info(self, pair):
+    def get_basic_info(self, pair=None):
         """
         "pairs": [
             {

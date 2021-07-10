@@ -11,7 +11,7 @@ import sys
 import time
 import requests
 import logging
-from grid_trade import GridBot
+from grid_trade import GridBot, set_precision
 from exchanges import Bitbank
 from utils import read_config, config_logging
 from db.manager import FireStoreManager
@@ -68,13 +68,17 @@ def run_grid_bot(config_file):
     try:
         while True:
             init_price = ex.get_mid_price()
+            basic_info = ex.get_basic_info()
+
+            set_precision(price_precision=basic_info['price_digits'], amount_precision=basic_info['amount_digits'])
+
             assets = ex.get_assets()
             init_base = assets['base_amount'] * base_usage
             init_quote = assets['quote_amount'] * quote_usage
 
             bot = GridBot(exchange=ex)
             param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                                    price_interval=price_interval, grid_num=grid_num, pair=pair, fee=ex.fee)
+                                                    price_interval=price_interval, grid_num=grid_num, pair=pair, fee=basic_info['fee'])
 
             bot.init_and_start(param=param, additional_info=additional_info)
             while True:

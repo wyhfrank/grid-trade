@@ -55,9 +55,10 @@ def create_pine_script(df_history, side_key='side', cost_key='cost', time_key='e
 
     return "\n".join(lines)
 
+
 #############################
 # Dynamically add properties
-def init_formatted_properties(cls, fields_to_format):
+def init_formatted_properties(cls, default_precision=4):
     """ For each of the fields in `fields_to_format` add a new property to the cls
             that formats the float value into proper string
         
@@ -70,9 +71,13 @@ def init_formatted_properties(cls, fields_to_format):
         fields_to_format = {
             'f1': {},
             'f2': {'precision': 1},
-            'f3': {'precision': 4, 'is_ratio': True},
+            'f3': {'precision': 4, '_type': 'ratio'},
         }
     """
+    fields_to_format = 'fields_to_format'
+    if not hasattr(cls, fields_to_format):
+        raise TypeError(f"Class {cls} need to have a {fields_to_format} field to add `Name_s` properties.")
+
     def get_formatter(field, precision=2, is_ratio=False):
         # Save the parameters in this closure
         def format_float(obj):
@@ -84,11 +89,10 @@ def init_formatted_properties(cls, fields_to_format):
             return res
         return property(format_float)
 
-    for field, setting in fields_to_format.items():
-        precision = setting.get('precision', 5)
-        is_ratio = setting.get('is_ratio', False)
+    for field, setting in getattr(cls, fields_to_format).items():
+        precision = setting.get('precision', default_precision)
+        is_ratio = setting.get('_type', '') == 'ratio'
         setattr(cls, field + '_s', get_formatter(field=field, precision=precision, is_ratio=is_ratio))
-
 
 
 #############################

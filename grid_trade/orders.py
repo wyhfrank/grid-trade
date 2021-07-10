@@ -7,6 +7,7 @@ from functools import reduce
 from collections import defaultdict
 import math
 import logging
+from grid_trade.mixins import FieldFormatMixin
 from utils import init_formatted_properties, setup_logging
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class OrderStatus(Enum):
     Cancelled = 'Cancelled'
 
 
-class Order:
+class Order(FieldFormatMixin):
     # Exclude these fields from serializing
     _to_exclude = ['db']
     enum_values = {
@@ -42,10 +43,10 @@ class Order:
     }
     # A new property of `NAME_s` will be added for each of the `NAME` variables
     fields_to_format = {
-        'amount': {},
-        'price': {'precision': 0},
-        'average_price': {'precision': 0},
-    }    
+        'amount': {'_type': 'amount'},
+        'price': {'precision': 0, '_type': 'price'},
+        'average_price': {'precision': 0, '_type': 'price'},
+    }
 
     def __init__(self, price, amount, pair, order_type=OrderType.Limit, order_id=None, couple_id=None, 
                 side=OrderSide.Buy, average_price=0, status=OrderStatus.ToCreate, 
@@ -663,7 +664,7 @@ class OrderCounter(defaultdict):
         return "[+{}, -{}]".format(self[OrderSide.Buy.value], self[OrderSide.Sell.value])
 
 
-init_formatted_properties(Order, Order.fields_to_format)
+init_formatted_properties(Order)
 
 
 ######################
