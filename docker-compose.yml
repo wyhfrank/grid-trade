@@ -9,5 +9,7 @@ services:
         tty: true
         volumes:
           - ./configs:/app/configs
+          - ./logs:/app/logs
+          - /etc/timezone:/etc/timezone:ro
         command: python main.py configs/config.yml
 
