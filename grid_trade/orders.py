@@ -1,4 +1,5 @@
 import sys
+from typing import Sequence
 sys.path.append('.')
 
 from enum import Enum
@@ -24,6 +25,7 @@ class OrderType(Enum):
 class OrderStatus(Enum):
     ToCreate = 'ToCreate'
     Created = 'Created'
+    OnTraded = 'OnTraded'
     Traded = 'Traded'
     Paired = 'Paired'
     ToCancel = 'ToCancel'
@@ -93,12 +95,18 @@ class Order:
         else:
             self._print_error_message(exp_status='ToCancel', action='Cancelled')
 
-    def trade_ok(self):
+    def mark_traded(self):
         if self.status == OrderStatus.Created:
+            self.status = OrderStatus.OnTraded
+        else:
+            self._print_error_message(exp_status='Created', action='OnTraded')
+
+    def trade_ok(self):
+        if self.status == OrderStatus.OnTraded:
             self.status = OrderStatus.Traded
             self.save_status_to_db()
         else:
-            self._print_error_message(exp_status='Created', action='Traded')
+            self._print_error_message(exp_status='OnTraded', action='Traded')
     
     def _print_error_message(self, action='Traded', exp_status='Created'):
         logger.warning(f"Order was not at status {exp_status} when being {action}. {self}") 
@@ -128,6 +136,10 @@ class Order:
             or (side == OrderSide.Sell and direction == 'inner')):
             flag = -1
         return flag
+    
+    def get_opponent_price(self, price_interval):
+        flag = self.get_direction_flag(self.side, direction='inner')
+        return self.price + flag * price_interval
     
     def get_dict_to_serialize(self):
         dest = vars(self).copy()
@@ -186,18 +198,32 @@ class OrderManager:
         @property
         def order_ids(self):
             return [o.order_id for o in self._orders]
+
+        def _get_best_worst_order(self, is_best, status='all') -> Order:
+            pos = 0 if is_best else -1
+            collection = self.all_orders if status == 'all' else self.active_orders
+            self.sort()
+            return collection[pos] if len(collection) > 0 else None
         
         @property
-        def best_order(self) -> Order:
+        def best_order_of_all(self) -> Order:
             """ Return the inner-most order: order that is closest to the current price """
-            self.sort()
-            return self._orders[0] if len(self._orders) > 0 else None
+            return self._get_best_worst_order(is_best=True, status='all')
 
         @property
-        def worst_order(self) -> Order:
+        def worst_order_of_all(self) -> Order:
             """ Return the outer-most order: order that is farthest from the current price """
-            self.sort()
-            return self._orders[-1] if len(self._orders) > 0 else None
+            return self._get_best_worst_order(is_best=False, status='all')
+
+        @property
+        def best_order_of_active(self) -> Order:
+            """ Return the inner-most `active` order: the active order that is closest to the current price """
+            return self._get_best_worst_order(is_best=True, status='active')
+
+        @property
+        def worst_order_of_active(self) -> Order:
+            """ Return the inner-most `active` order: the active order that is closest to the current price """
+            return self._get_best_worst_order(is_best=False, status='active')
 
         @property
         def to_create(self):
@@ -210,7 +236,11 @@ class OrderManager:
         @property
         def active_orders(self):
             return self.get_orders_by_status(status_list=[OrderStatus.Created])
-        
+
+        @property
+        def on_traded_orders(self):
+            return self.get_orders_by_status(status_list=[OrderStatus.OnTraded])
+
         @property
         def all_orders(self):
             return self._orders
@@ -235,9 +265,16 @@ class OrderManager:
                 self.prepare_order_at_price(price=price)
 
         def prepare_order_at_price(self, price):
+            if self._price_exist_in_active_orders(price=price):
+                logger.warning(f"Price [{price}] already exists in {self}. Skip.")
+                return False
             o = Order(price=price, amount=self.unit_amount, side=self.side, pair=self.om.pair, 
                     user=self.om.user, exchange=self.om.exchange, db=self.om.db)
-            self._orders.append(o)            
+            self._orders.append(o)
+            return True
+        
+        def _price_exist_in_active_orders(self, price):
+            return price in [o.price for o in self.active_orders]
         
         def get_price_grid(self, origin, direction='outer', start=0, count=None):
             """ Returns a generator of `count` prices on grid, starting from `origin`, towards `direction`, 
@@ -292,22 +329,22 @@ class OrderManager:
         #                 user=self.om.user, exchange=self.om.exchange, db=self.om.db)
         #         self._orders.append(o)
 
-        def refill_stack(self, new_price):
-            """ Refill the gap between best_order and new_price.
-                If best_order is None, fill one in the `outer` side of new_price
-            """
-            if not self.best_order:
-                # Stack has no orders left
-                # self.to_ideal_size(init_price=new_price)
-                price = list(self.get_price_grid(origin=new_price, direction='outer', count=1))[0]
-                self.prepare_order_at_price(price)
-            else:
-                price_diff = new_price - self.best_order.price
-                if self.side == OrderSide.Sell:
-                    price_diff = - price_diff
-                count = int(price_diff // self.price_interval) - 1
-                if count > 0:
-                    self.refill_orders(count=count, direction="inner")
+        # def refill_stack(self, new_price):
+        #     """ Refill the gap between best_order and new_price.
+        #         If best_order is None, fill one in the `outer` side of new_price
+        #     """
+        #     if not self.best_order:
+        #         # Stack has no orders left
+        #         # self.to_ideal_size(init_price=new_price)
+        #         price = list(self.get_price_grid(origin=new_price, direction='outer', count=1))[0]
+        #         self.prepare_order_at_price(price)
+        #     else:
+        #         price_diff = new_price - self.best_order.price
+        #         if self.side == OrderSide.Sell:
+        #             price_diff = - price_diff
+        #         count = int(price_diff // self.price_interval) - 1
+        #         if count > 0:
+        #             self.refill_orders(count=count, direction="inner")
 
 
         def refill_orders(self, count=1, direction="inner"):
@@ -320,7 +357,12 @@ class OrderManager:
 
             logger.debug(f"Filling {count} order(s) in [{self.side.value}] stack towards {direction}")
 
-            reference_order = self.worst_order if direction == "outer" else self.best_order
+            # Here we should use the worst/best_of_active not _of_all
+            reference_order = self.worst_order_of_active if direction == "outer" else self.best_order_of_active
+            if not reference_order:
+                # Active orders list is emptly, which implies that all the orders on this stack are traded
+                #  Let's try to take the best/worst order from the full list (where OnTraded orders should exist)
+                reference_order = self.worst_order_of_all if direction == "outer" else self.best_order_of_all
             if reference_order:
                 origin = reference_order.price
                 # Since the origin is on the grid, we need to skip it by setting start=1
@@ -330,6 +372,22 @@ class OrderManager:
                 self.sort()
             else:
                 raise ValueError(f"In refill_orders, refrenece_order is None. {self}")
+        
+        def refill_stack_by_pairing(self, traded_orders: Sequence[Order]):
+            # Since we calculate the price based on the orders from the opposite side,
+            #  the direction is going towards the `outer` side
+            filled_count = 0
+            for o in traded_orders:
+                expected_status = [OrderStatus.OnTraded, OrderStatus.Traded]
+                if not o.status in expected_status:
+                    logger.warning(f"Trying to create an opposite order but the reference order {o} is not with status: {expected_status}")
+                
+                new_price = o.get_opponent_price(self.price_interval)
+                filled = self.prepare_order_at_price(price=new_price)
+                if filled:
+                    filled_count += 1
+            self.sort()
+            return filled_count
 
         def shrink_outer(self, count=1):
             """ Prepare to remove `count` of the orders from the outer """
@@ -365,13 +423,17 @@ class OrderManager:
             else:
                 self._print_order_not_found_error(order, action='Force cancelling', place='_orders')
         
-        def order_traded(self, order):
+        def mark_order_on_traded(self, order: Order):
             if order in self.active_orders:
+                order.mark_traded()
+            else:
+                self._print_order_not_found_error(order, action='Mark Traded', place='active_orders')
+        
+        def orders_traded(self):
+            for order in self.on_traded_orders:
                 order.trade_ok()
                 self._orders.remove(order)
-            else:
-                self._print_order_not_found_error(order, action='Trading', place='active_orders')
-        
+
         def cancel_all(self):
             for order in self.active_orders:
                 order.cancel_ok(force=True)
@@ -382,7 +444,10 @@ class OrderManager:
         
         @property
         def expected_size(self):
-            return len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created])) 
+            return len(self.get_orders_by_status(status_list=[OrderStatus.ToCreate, OrderStatus.Created]))
+        
+        def __repr__(self) -> str:
+            return f"OrderStack(side={self.side.value})"
             
     def __init__(self, price_interval, unit_amount, grid_num, order_limit, balance_threshold=2, additional_info=None) -> None:
         """ 
@@ -495,16 +560,28 @@ class OrderManager:
                 return order, self.sell_stack
         return None, None
             
-    def order_traded(self, order_id):
-        """ Set the status of the order to Traded """
+    def mark_order_on_traded(self, order_id):
+        """ Set the status of the order to OnTraded """
         order, stack = self.get_order_and_stack_by_order_id(order_id=order_id)
-        stack.order_traded(order)
+        if stack:
+            stack.mark_order_on_traded(order)
 
-    def refill_orders(self, new_price):
-        self.buy_stack.refill_stack(new_price=new_price)
-        self.sell_stack.refill_stack(new_price=new_price)
+    def orders_traded(self):
+        """ Set the status of the orders to Traded """
+        self.buy_stack.orders_traded()
+        self.sell_stack.orders_traded()
 
-    def balance_stacks(self, new_price):
+    # def refill_orders_by_new_price(self, new_price):
+    #     self.buy_stack.refill_stack(new_price=new_price)
+    #     self.sell_stack.refill_stack(new_price=new_price)
+
+    def refill_orders_at_opposite_position(self):
+        filled_count = self.sell_stack.refill_stack_by_pairing(traded_orders=self.buy_stack.on_traded_orders)
+        if filled_count <= 0:
+            # Sell stack takes the priority, i.e. only refill buy stack if sell is not filled
+            self.buy_stack.refill_stack_by_pairing(traded_orders=self.sell_stack.on_traded_orders)
+
+    def balance_stacks(self):
         exp_buy_size = self.buy_stack.expected_size
         exp_sell_size = self.sell_stack.expected_size
         stack_to_expand = stack_to_shrink = None
@@ -582,7 +659,6 @@ class OrderCounter(defaultdict):
 init_formatted_properties(Order, Order.fields_to_format)
 
 
-
 ######################
 # Tests
 def test_order():
@@ -602,63 +678,6 @@ def test_order():
     print(o1.short_markdown)
 
 
-def test_om():
-    import sys
-    sys.path.append('.')
-    from db.manager import FireStoreManager
-    from exchanges import Bitbank
-    from utils import read_config
-
-
-    fsm = FireStoreManager()
-    config = read_config()
-    api_key = config['api']['key']
-    api_secret = config['api']['secret']
-
-    pair = 'eth_jpy'
-    # ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
-
-    additional_info = {
-        'pair': pair,
-        'user': 'user1',
-        # 'exchange': ex.name,
-        # 'db': fsm,
-    }
-    price_interval=500
-    unit_amount=0.2
-    grid_num=100
-    order_limit=6
-    om = OrderManager(price_interval=price_interval, unit_amount=unit_amount,
-                    grid_num=grid_num,order_limit=order_limit, additional_info=additional_info)
-    om.init_stacks(init_price=3000)
-    
-    for o in om.orders_to_create:
-        om.order_create_ok(o)
-
-    om.print_stacks()
-
-    o = om.buy_stack.active_orders[0]
-    om.order_traded(order_id=o.order_id)
-    o = om.buy_stack.active_orders[0]
-    om.order_traded(order_id=o.order_id)
-    # o = om.buy_stack.active_orders[0]
-    # om.order_traded(order_id=o.order_id)
-
-    om.print_stacks()
-
-    new_price = 1600
-    om.refill_orders(new_price=new_price)
-    om.balance_stacks(new_price=new_price)
-    
-    for o in om.orders_to_cancel:
-        om.order_cancel_ok(o)
-    for o in om.orders_to_create:
-        om.order_create_ok(order=o)
-
-    om.print_stacks()
-
-
 if __name__ == '__main__':
-    setup_logging(level=logging.DEBUG)
+    setup_logging()
     # test_order()
-    test_om()

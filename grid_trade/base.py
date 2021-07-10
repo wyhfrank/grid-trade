@@ -230,10 +230,11 @@ class GridBot:
         self.notify_info(f"GridBot v{__version__} (`{self.uid}`) stopped.")
 
     def sync_and_adjust(self):
+        """ Sync the orders status from exchange and adjust the stacks (refill new orders, balance stacks etc.) """
         price_info = self.exchange.get_latest_prices()
 
         orders_data = self._retrieve_orders_data()
-        # print(f"orders_data: {orders_data}")
+
         counter = self._sync_order_status(orders_data=orders_data, price_info=price_info)
 
         if counter.total <= 0:
@@ -245,7 +246,7 @@ class GridBot:
             if counter.both_sides:
                 self.notify_error(f"Oders on both sides are traded during one sync: {counter.preview}")
 
-        new_price = self._adjust_orders_to_current_price(price_info=price_info)
+        new_price = self._adjust_orders(price_info=price_info)
         if not new_price:
             return
         
@@ -276,8 +277,8 @@ class GridBot:
                 #  since the order will be removed from the stack by then
                 order = self.om.get_order_by_id(order_id=oid)
 
-                # Notify the order manager that the order is traded
-                self.om.order_traded(order_id=oid)
+                # Mark the order that is traded in this sync
+                self.om.mark_order_on_traded(order_id=oid)
 
                 if order:
                     counter.increase(order.side)
@@ -298,7 +299,7 @@ class GridBot:
                 # self.notify_error(msg) # This will be spamming
         return counter
 
-    def  _adjust_orders_to_current_price(self, price_info):
+    def  _adjust_orders(self, price_info):
         # mid_price = self.exchange.get_mid_price()
         new_price = price_info['price']
         self.latest_price = new_price
@@ -310,10 +311,15 @@ class GridBot:
             return False
 
         # Refill with new orders (create new orders in the opposite stack)
-        self.om.refill_orders(new_price=new_price)
-        self.om.balance_stacks(new_price=new_price)
+        # self.om.refill_orders_by_new_price(new_price=new_price)
+        self.om.refill_orders_at_opposite_position()
+
+        # Balance the stacks if necessary
+        self.om.balance_stacks()
+
         self._commit_cancel_orders()
         self._commit_create_orders()
+        self._commit_oders_traded()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
         return new_price
     
@@ -322,34 +328,29 @@ class GridBot:
         new_price = price_info['price']
         best_bid = price_info['best_bid']
         best_ask = price_info['best_ask']
-        diff = new_price - order.price
         irregular = False
-        other_side_creatable = True
-        
-        if order.side == OrderSide.Buy and diff > 0:
-            gt_lt = "lower"
-            other_side = OrderSide.Sell
-            other_side_price = order.price + self.om.price_interval
-            other_side_creatable = other_side_price >= best_bid
-            irregular = True
-        elif order.side == OrderSide.Sell and diff < 0:
-            gt_lt = "higher"
-            other_side = OrderSide.Buy
-            other_side_price = order.price - self.om.price_interval
-            other_side_creatable = other_side_price <= best_ask
-            irregular = True                
-                
-        # if irregular:
-        # Notify only when post_only orders cannot be created
-        if not other_side_creatable:
-            flag = "+" if diff > 0 else ""
-            diff_s = flag + str(diff)
-            creatable = "can" if other_side_creatable else "**CANNOT**"
+        other_side_price = order.get_opponent_price(self.om.price_interval)
 
-            return f"New price should be [{gt_lt}] than the [{order.side.value}] order " +\
-                    f"@[{order.price}], however it is [{diff_s}] = [{new_price}]\n" +\
-                    f"Spread: [{best_bid} ~ {best_ask}]. " +\
-                    f"Opposite {other_side.value} order {creatable} be created @[{other_side_price}]."
+        if order.side == OrderSide.Buy and other_side_price <= best_bid:
+            other_side = OrderSide.Sell
+            other_side_marker = '---'
+            irregular = True
+        elif order.side == OrderSide.Sell and other_side_price >= best_ask:
+            other_side = OrderSide.Buy
+            other_side_marker = '+++'
+            irregular = True
+                
+        if irregular:
+            items = sorted([
+                ('vvv', best_ask),
+                (other_side_marker, other_side_price),
+                ('@@@', new_price),
+                ('^^^', best_bid),
+            ], key=lambda x: x[1], reverse=True)
+
+            msg = "\n".join(map(lambda p: "{}: {}".format(*p), items))
+            return f"Opponent [{other_side.value}] order +[{other_side_price}] cannot be created.\n" +\
+                f"```\n{msg}```"
         return False
 
     #################
@@ -435,7 +436,10 @@ class GridBot:
             except (InvalidPriceError, ExceedOrderLimitError):
                 self.om.order_force_cancelled(order=o)
                 self.notify_error(f"Create order failed in {self.exchange} for order: {o}")
-    
+
+    def _commit_oders_traded(self):
+        self.om.orders_traded()
+
     #################
     # Serialization
     def get_dict_to_serialize(self, fields=None):
