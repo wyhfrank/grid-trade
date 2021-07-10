@@ -283,7 +283,7 @@ class GridBot:
                 if order:
                     counter.increase(order.side)
                     self.traded_count.increase(order.side) # This need to be updated imediately right before the notification
-                    batch_info = f"[{counter.total}/{total_traded_this_sync}]" if total_traded_this_sync > 1 else ""
+                    batch_info = f" [{counter.total}/{total_traded_this_sync}]" if total_traded_this_sync > 1 else ""
                     self.notify_order_traded(order, more=batch_info)
                     irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
                     if irregular_msg:
@@ -504,64 +504,6 @@ def test_param():
 
     print(param.full_markdown)
     print(param.short_markdown)
-
-
-def test_gridbot():
-    import sys
-    sys.path.append('.')
-    import time
-    from db.manager import FireStoreManager
-    from exchanges import Bitbank
-    from utils import read_config
-
-
-    fsm = FireStoreManager()
-    config = read_config()
-    api_key = config['api']['key']
-    api_secret = config['api']['secret']
-
-    pair = 'eth_jpy'
-    order_limit=6
-    ex = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret, max_order_count=order_limit)
-
-    additional_info = {
-        'pair': pair,
-        'user': 'user1',
-        'exchange': ex.name,
-        'db': fsm,
-    }
-    price_interval=5000
-    grid_num=100
-    init_base = 0.1915
-    init_quote = 90000
-    init_price = 257000
-    fee = -0.002
-
-    init_price = ex.get_new_price()
-    bot = GridBot(exchange=ex)
-    param = bot.Parameter.calc_grid_params_by_interval(init_base=init_base, init_quote=init_quote, init_price=init_price,
-                                            price_interval=price_interval, grid_num=grid_num, pair=pair, fee=fee)
-
-    print(param)
-
-    bot.init_and_start(param=param, additional_info=additional_info)
-
-    time.sleep(10)
-
-    bot.cancel_and_stop()
-    return
-
-    MIN_SLEEP_TIME = 1
-    for i in range(30):
-        start = time.time()
-        bot.sync_order_status()
-        # bot.om.print_stacks()
-
-        elapsed = time.time() - start
-        print(elapsed)
-        to_sleep = MIN_SLEEP_TIME - elapsed
-        if to_sleep > 0:
-            time.sleep(to_sleep)
 
 
 def test_serialization():
