@@ -315,11 +315,10 @@ class GridBot:
 
     def sync_and_adjust(self):
         """ Sync the orders status from exchange and adjust the stacks (refill new orders, balance stacks etc.) """
-        price_info = self.exchange.get_latest_prices()
 
         orders_data = self._retrieve_orders_data()
 
-        counter = self._sync_order_status(orders_data=orders_data, price_info=price_info)
+        counter = self._sync_order_status(orders_data=orders_data)
 
         if counter.total <= 0:
             # No orders traded
@@ -330,6 +329,7 @@ class GridBot:
             if counter.both_sides:
                 self.notify_error(f"Oders on both sides are traded during one sync: {counter.preview}")
 
+        price_info = self.exchange.get_latest_prices()
         new_price = self._adjust_orders(price_info=price_info)
         if not new_price:
             return
@@ -350,7 +350,7 @@ class GridBot:
             self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")
         return orders_data
 
-    def _sync_order_status(self, orders_data, price_info):
+    def _sync_order_status(self, orders_data):
         total_traded_this_sync = len(list(filter(self.exchange.is_order_fullyfilled, orders_data)))
         counter = OrderCounter()
         for order_data in orders_data:
@@ -369,9 +369,9 @@ class GridBot:
                     self.traded_count.increase(order.side) # This need to be updated imediately right before the notification
                     batch_info = f" [{counter.total}/{total_traded_this_sync}]" if total_traded_this_sync > 1 else ""
                     self.notify_order_traded(order, more=batch_info)
-                    irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
-                    if irregular_msg:
-                        self.notify_error(message=irregular_msg)
+                    # irregular_msg = self._check_irregular_price(order=order, price_info=price_info)
+                    # if irregular_msg:
+                        # self.notify_error(message=irregular_msg)
                 else:
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
@@ -388,7 +388,7 @@ class GridBot:
         new_price = price_info['price']
         self.latest_price = new_price
         if new_price > self.param.highest_price or new_price < self.param.lowest_price:
-            logger.info(f"Current price (`{new_price}`) exceeds price range: " + \
+            logger.warning(f"Current price (`{new_price}`) exceeds price range: " + \
                         f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
             # self.notify_error(f"Current price (`{new_price}`) exceeds price range: " + \
                             #   f"[{self.param.lowest_price_s} ~ {self.param.highest_price_s}]")
