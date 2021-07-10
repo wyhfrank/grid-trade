@@ -105,6 +105,9 @@ def  setup_logging(log_file_path=None, backup_count=30, basic_level=logging.DEBU
     handlers.append(sh)
 
     if log_file_path:
+        dirname = os.path.dirname(log_file_path)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         fh = logging.handlers.TimedRotatingFileHandler(
             filename=log_file_path, when='midnight', backupCount=backup_count)
         fh.setFormatter(formatter)
