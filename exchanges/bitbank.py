@@ -59,6 +59,16 @@ class Exchange:
         return self.name
 
 
+class BitbankPrivateExt(python_bitbankcc.private):
+    
+    # This endpoint is not support by the official python api
+    # It is strange that this is a private api tho
+    #   even the official doc says auth is not needed...
+    #   https://github.com/bitbankinc/bitbank-api-docs/blob/master/rest-api.md#get-all-pairs-info
+    def get_pairs(self):
+        return self._get_query('/spot/pairs', {})
+
+
 class Bitbank(Exchange):
     '''
     Format of order_data:
@@ -98,7 +108,7 @@ class Bitbank(Exchange):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.pub = python_bitbankcc.public()
-        self.prv = python_bitbankcc.private(api_key=self.api_key, api_secret=self.api_secret)
+        self.prv = BitbankPrivateExt(api_key=self.api_key, api_secret=self.api_secret)
     
     def get_latest_prices(self):
         """Get the latest price, best_ask, best_bid"""
@@ -128,6 +138,51 @@ class Bitbank(Exchange):
         base_amount = self.parse_currency_amount(response=res, part='base')
         quote_amount = self.parse_currency_amount(response=res, part='quote')
         return {'base_amount': base_amount, 'quote_amount': quote_amount}
+
+    def get_basic_info(self, pair):
+        """
+        "pairs": [
+            {
+                "name": "btc_jpy",
+                "base_asset": "btc",
+                "quote_asset": "jpy",
+                "maker_fee_rate_base": "0",
+                "taker_fee_rate_base": "0",
+                "maker_fee_rate_quote": "-0.0002",
+                "taker_fee_rate_quote": "0.0012",
+                "unit_amount": "0.0001",
+                "limit_max_amount": "1000",
+                "market_max_amount": "10",
+                "market_allowance_rate": "0.2",
+                "price_digits": 0,
+                "amount_digits": 4,
+                "is_enabled": true,
+                "stop_order": false,
+                "stop_order_and_cancel": false
+            },
+            ...
+        ]        
+        """
+        if not pair:
+            pair = self.pair
+        
+        if not pair:
+            return {}
+
+        res = self.prv.get_pairs()
+        pair_data = {}
+        for pair_data in res['pairs']:
+            if pair_data['name'] == pair:
+                break
+
+        fee = float(pair_data.get('maker_fee_rate_quote', 0))
+        price_digits = pair_data.get('price_digits', 0)
+        amount_digits = pair_data.get('amount_digits', 4)
+        return {
+            'fee': fee,
+            'price_digits': price_digits,
+            'amount_digits': amount_digits,
+        }
 
     def create_order(self, order):
         if not order.pair == self.pair:
@@ -197,77 +252,3 @@ class Bitbank(Exchange):
             return order_data['status'] in [cls.OrderStatus.FullyFilled.value]
         except KeyError:
             return False
-
-
-def test_get_prices():
-    bb = Bitbank(pair='btc_jpy')
-    info = bb.get_latest_prices()
-    print(info)
-
-
-def test_create_order():
-    import time
-    from grid_trade.orders import Order, OrderSide
-    from utils import read_config
-
-    config = read_config()
-    api_key = config['api']['key']
-    api_secret = config['api']['secret']
-    
-    pair = 'btc_jpy'
-    data = {
-        'price': 10000,
-        'pair': pair,
-        'amount': 0.001,
-        'side': OrderSide.Buy,
-    }
-    o = Order.from_dict(data)
-    print(o)
-    bb = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
-
-
-    for i in range(1, 33):
-        print(i)
-        bb.create_order(o)
-        time.sleep(0.1)
-
-    return
-    # print(o)
-    data['order_id'] = o.order_id
-    data['order_id'] = 15627933749
-
-    # bb.cancel_orders(order_ids=[data['order_id']])
-
-    orders_data = bb.get_orders_data(order_ids=[data['order_id']])
-
-    for od in orders_data:
-        is_cancelled = bb.is_order_cancelled(order_data=od)
-        print(f"is_cancelled: {is_cancelled}")
-        is_fullyfilled = bb.is_order_fullyfilled(order_data=od)
-        print(f"is_fullyfilled: {is_fullyfilled}")
-
-
-def test_cancel_all_orders():
-    from utils import read_config
-
-    config = read_config()
-    api_key = config['api']['key']
-    api_secret = config['api']['secret']
-    
-    pair = 'btc_jpy'
-    bb = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)
-
-    orders_data = bb.get_active_orders_data()
-    order_ids = [od['order_id'] for od in orders_data]
-    bb.cancel_orders(order_ids=order_ids)
-
-
-def append_sys_path():
-    import sys
-    sys.path.append('.')
-
-
-if __name__ == "__main__":
-    append_sys_path()
-    # test_create_order()
-    test_cancel_all_orders()
