@@ -379,8 +379,9 @@ class GridBot:
                 # Force cancel the order
                 self.om.order_force_cancelled(order_id=oid)
                 msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
-                logger.warning(msg)
-                # self.notify_error(msg) # This will be spamming
+                # logger.warning(msg)
+                # This will be spamming. Update: the order will be cancelled and removed, thus no spamming
+                self.notify_error(msg)
         return counter
 
     def  _adjust_orders(self, price_info):
