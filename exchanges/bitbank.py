@@ -1,5 +1,6 @@
 from enum import Enum
 import requests
+import pandas as pd
 import python_bitbankcc
 
 
@@ -60,6 +61,7 @@ class Exchange:
 
 
 class BitbankPrivateExt(python_bitbankcc.private):
+    trade_history_count_limit = 1000
     
     # This endpoint is not support by the official python api
     # It is strange that this is a private api tho
@@ -67,6 +69,38 @@ class BitbankPrivateExt(python_bitbankcc.private):
     #   https://github.com/bitbankinc/bitbank-api-docs/blob/master/rest-api.md#get-all-pairs-info
     def get_pairs(self):
         return self._get_query('/spot/pairs', {})
+    
+    # The parent class only support two arguments: pair, count
+    #  we need more arguments to get the full history: since, end
+    def get_trade_history(self, pair, **kwargs):
+        """ 
+        "trades": [
+            {
+                "trade_id": 1156625315,
+                "order_id": 15595942125,
+                "pair": "btc_jpy",
+                "side": "buy",
+                "type": "market",
+                "amount": "0.0002",
+                "price": "3755000",
+                "maker_taker": "taker",
+                "fee_amount_base": "0.00000000",
+                "fee_amount_quote": "0.9012",
+                "executed_at": 1625267100217
+            },
+            ...
+        ]
+        """
+        query = {
+            'pair': pair,
+        }
+
+        supported_args = ['count', 'since', 'end', 'order']
+        for k, v in kwargs.items():
+            if k in supported_args and v:
+                query[k] = v
+
+        return self._get_query('/user/spot/trade_history?', query)
 
 
 class Bitbank(Exchange):
@@ -252,3 +286,46 @@ class Bitbank(Exchange):
             return order_data['status'] in [cls.OrderStatus.FullyFilled.value]
         except KeyError:
             return False
+    
+    def get_trade_history(self, pair=None, count=None, since=None, end=None, ascending=True):
+        def convert_float(df, cols=['amount', 'price', 'fee_amount_base', 'fee_amount_quote']):
+            for col in cols:
+                if col in df.columns:
+                    df[col] = df[col].astype(float)
+
+
+        def convert_date(df, cols=['executed_at']):
+            for col in cols:
+                if col in df.columns:
+                    df[col] = df[col].astype(float)
+                    # https://stackoverflow.com/a/54488698/1938012
+                    df[f"{col}_date"] = pd.to_datetime(df[col], unit='ms', utc=True).dt.tz_convert('Asia/Tokyo')
+
+        if not pair:
+            pair = self.pair
+        
+        order = 'asc' if ascending else 'desc'
+        df = pd.DataFrame()
+        
+        batch_start = start
+        batch_end = end
+        while True:
+            res = self.prv.get_trade_history(pair=pair, count=count, since=batch_start, end=batch_end, order=order)
+            n_records = len(res)
+            if not n_records:
+                break
+            df_batch = pd.DataFrame(res['trades'])
+            convert_float(df_batch)
+            convert_date(df_batch)
+            df_batch['cost'] = df_batch['amount'] * df_batch['price']
+            df = df.merge(df_batch)
+
+            batch_start = df_batch['executed_at'].min()
+            if since and batch_start <= since:
+                break
+            batch_end = batch_start
+
+        df = df.drop_duplicates(subset=['trade_id'], inplace=True).sort_values(by='executed_at', ascending=ascending)
+        return res
+        
+

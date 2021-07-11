@@ -60,6 +60,28 @@ class TestBitbank:
             logger.info(f"Basic info for {pair}: {info}")
             assert info == exp_data
 
+    def test_get_trade_history(self):
+        def get_min_max(data):
+            trades = data['trades']
+            ts = [x['executed_at'] for x in trades]
+            return min(ts), max(ts)
+        bb = self.bb
+        
+        asc = bb.prv.get_trade_history(pair='eth_jpy', order='asc')
+        desc = bb.prv.get_trade_history(pair='eth_jpy', order='desc')
+
+        asc_min, asc_max = get_min_max(asc)
+        desc_min, desc_max = get_min_max(desc)
+
+        assert asc_min == desc_min
+        assert asc_max == desc_max
+
+        # since = 
+
+        # trades_data = bb.get_trade_history(count=1)
+        # logger.info(f"Trades: {trades_data}")
+        # assert len(trades_data) == 1
+
 
     @pytest.mark.skip("This happens a lot: Exception: エラーコード: 20001 内容: API認証に失敗しました")
     def test_create_and_cancel_order(self):
