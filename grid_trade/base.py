@@ -224,7 +224,7 @@ class GridBot:
             buy_count = counter.total_of(OrderSide.Buy)
             sell_count = counter.total_of(OrderSide.Sell)
             matched = min(buy_count, sell_count)
-            extra_count = abs(buy_count > sell_count)
+            extra_count = abs(buy_count - sell_count)
             traded_value = self.param.unit_amount * self.param.init_price * matched
             lowest_actual_earning = self.param.lowest_earn_rate_per_grid * traded_value
             highest_actual_earning = self.param.highest_earn_rate_per_grid * traded_value
