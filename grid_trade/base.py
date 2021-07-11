@@ -43,8 +43,8 @@ class GridBot:
             'unused_quote': {'precision': 0, '_type': 'price'},
             'lowest_price': {'precision': 0, '_type': 'price'},
             'highest_price': {'precision': 0, '_type': 'price'},
-            'lowest_earn_rate_per_grid': {'precision': 4, '_type': 'ratio'},
-            'highest_earn_rate_per_grid': {'precision': 4, '_type': 'ratio'},
+            'lowest_earn_rate_per_grid': {'precision': 2, '_type': 'rate'},
+            'highest_earn_rate_per_grid': {'precision': 2, '_type': 'rate'},
         }
 
         def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price,
@@ -244,7 +244,7 @@ class GridBot:
             data = {
                 'Duration': "{} h ({} d)".format(format_float(duration_hour, 1), format_float(duration_day, 1)),
                 'Actual Earning': [format_float(lowest_actual_earning, 2), format_float(highest_actual_earning, 2)],
-                'Actual Earn Rate': [format_rate(lowest_earn_rate, 6), format_rate(highest_earn_rate, 6)],
+                'Actual Earn Rate': [format_rate(lowest_earn_rate, 4), format_rate(highest_earn_rate, 4)],
                 'Yearly Earn Rate': [format_rate(lowest_yearly_earn_rate), format_rate(highest_yearly_earn_rate)],
                 'Extra Side': extra_side.value,
                 'Extra Hold Amount': extra_hold_amount,

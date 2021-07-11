@@ -71,18 +71,18 @@ def init_formatted_properties(cls, default_precision=4):
         fields_to_format = {
             'f1': {},
             'f2': {'precision': 1},
-            'f3': {'precision': 4, '_type': 'ratio'},
+            'f3': {'precision': 2, '_type': 'rate'},
         }
     """
     fields_to_format = 'fields_to_format'
     if not hasattr(cls, fields_to_format):
         raise TypeError(f"Class {cls} need to have a {fields_to_format} field to add `Name_s` properties.")
 
-    def get_formatter(field, precision=2, is_ratio=False):
+    def get_formatter(field, precision=2, is_rate=False):
         # Save the parameters in this closure
         def format_field(obj):
             v = round(getattr(obj, field), precision)
-            if is_ratio:
+            if is_rate:
                 res = format_rate(rate=v, precision=precision)
             else:
                 res = format_float(value=v, precision=precision)
@@ -91,12 +91,12 @@ def init_formatted_properties(cls, default_precision=4):
 
     for field, setting in getattr(cls, fields_to_format).items():
         precision = setting.get('precision', default_precision)
-        is_ratio = setting.get('_type', '') == 'ratio'
-        setattr(cls, field + '_s', get_formatter(field=field, precision=precision, is_ratio=is_ratio))
+        is_rate = setting.get('_type', '') == 'rate'
+        setattr(cls, field + '_s', get_formatter(field=field, precision=precision, is_rate=is_rate))
 
 
-def format_rate(rate, precision=4):
-    return f"{rate * 100:.{precision-2}f}%"
+def format_rate(rate, precision=2):
+    return f"{rate * 100:.{precision}f}%"
 
 def format_float(value, precision=4):
     return f"{value:.{precision}f}"

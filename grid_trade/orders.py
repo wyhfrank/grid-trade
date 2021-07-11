@@ -43,7 +43,7 @@ class Order(FieldFormatMixin):
     }
     # A new property of `NAME_s` will be added for each of the `NAME` variables
     fields_to_format = {
-        'amount': {'_type': 'amount'},
+        'amount': {'precision': 4, '_type': 'amount'},
         'price': {'precision': 0, '_type': 'price'},
         'average_price': {'precision': 0, '_type': 'price'},
     }

@@ -129,7 +129,7 @@ class TestGridBot:
         oc.increase(OrderSide.Buy, 86)
         oc.increase(OrderSide.Sell, 76)
 
-        duration_hour = 3
+        duration_hour = 12
         res = er.from_order_counter(counter=oc, duration_hour=duration_hour)
         logger.info(res)
         assert '12.0 h' in res
