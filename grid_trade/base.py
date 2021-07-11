@@ -221,6 +221,7 @@ class GridBot:
         def from_order_counter(self, counter: OrderCounter, duration_hour):
             def to_yearly(earn_rate, hour):
                 return earn_rate / hour * 24 * 365
+
             buy_count = counter.total_of(OrderSide.Buy)
             sell_count = counter.total_of(OrderSide.Sell)
             matched = min(buy_count, sell_count)
@@ -243,6 +244,7 @@ class GridBot:
             duration_day = duration_hour / 24
             data = {
                 'Duration': "{} h ({} d)".format(format_float(duration_hour, 1), format_float(duration_day, 1)),
+                'Buy-Sell Count': counter.preview,
                 'Actual Earning': [format_float(lowest_actual_earning, 2), format_float(highest_actual_earning, 2)],
                 'Actual Earn Rate': [format_rate(lowest_earn_rate, 4), format_rate(highest_earn_rate, 4)],
                 'Yearly Earn Rate': [format_rate(lowest_yearly_earn_rate), format_rate(highest_yearly_earn_rate)],
