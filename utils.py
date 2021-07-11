@@ -80,20 +80,26 @@ def init_formatted_properties(cls, default_precision=4):
 
     def get_formatter(field, precision=2, is_ratio=False):
         # Save the parameters in this closure
-        def format_float(obj):
+        def format_field(obj):
             v = round(getattr(obj, field), precision)
             if is_ratio:
-                res = f"{v * 100:.{precision-2}f}%"
+                res = format_rate(rate=v, precision=precision)
             else:
-                res = f"{v:.{precision}f}"
+                res = format_float(value=v, precision=precision)
             return res
-        return property(format_float)
+        return property(format_field)
 
     for field, setting in getattr(cls, fields_to_format).items():
         precision = setting.get('precision', default_precision)
         is_ratio = setting.get('_type', '') == 'ratio'
         setattr(cls, field + '_s', get_formatter(field=field, precision=precision, is_ratio=is_ratio))
 
+
+def format_rate(rate, precision=4):
+    return f"{rate * 100:.{precision-2}f}%"
+
+def format_float(value, precision=4):
+    return f"{value:.{precision}f}"
 
 #############################
 # Logging

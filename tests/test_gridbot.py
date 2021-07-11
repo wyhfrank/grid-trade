@@ -6,11 +6,12 @@ sys.path.append('.')
 import requests
 import pytest
 import python_bitbankcc
-from grid_trade.base import GridBot
-from grid_trade.orders import Order, OrderSide
+from grid_trade import GridBot, set_precision
+from grid_trade.orders import Order, OrderSide, OrderCounter
 from exchanges import Bitbank
 import logging
 from utils import setup_logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,30 @@ class TestGridBot:
 
         params = GridBot.Parameter.calc_grid_params_by_support(init_base, init_quote, init_price, support, grid_num=grid_num, fee=fee)
         assert params.price_interval == 10
-    
+
+    def test_execution_report(self, mock_bitbank):
+        init_price = 233860
+        init_quote = 4000
+        init_base = 0.2616
+        interval = 300
+        grid_num = 100
+        fee = -0.0002
+
+        set_precision(price_precision=0, amount_precision=4)
+        params = GridBot.Parameter.calc_grid_params_by_interval(init_base, init_quote, init_price, 
+                        price_interval=interval, grid_num=grid_num, fee=fee)
+        
+        er = GridBot.ExecutionReport(param=params)
+
+        oc = OrderCounter()
+        oc.increase(OrderSide.Buy, 86)
+        oc.increase(OrderSide.Sell, 76)
+
+        duration_hour = 3
+        res = er.from_order_counter(counter=oc, duration_hour=duration_hour)
+        logger.info(res)
+        assert '12.0 h' in res
+
     def test_irregular_price(self, mock_bitbank):
         bot, param, additional = self.create_bot(max_order_count = 4)
         

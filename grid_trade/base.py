@@ -11,7 +11,7 @@ from grid_trade.mixins import FieldFormatMixin
 from grid_trade.orders import Order, OrderManager, OrderSide, OrderCounter
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
-from utils import init_formatted_properties
+from utils import format_float, format_rate, init_formatted_properties
 
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,8 @@ class GridBot:
     class Parameter(FieldFormatMixin):
         # A new property of `NAME_s` will be added for each of the `NAME` variables
         fields_to_format = {
-            'unit_amount': {'_type': 'amount'},
-            'init_base': {'_type': 'amount'},
+            'unit_amount': {'precision': 4, '_type': 'amount'},
+            'init_base': {'precision': 4, '_type': 'amount'},
             'init_quote': {'precision': 0, '_type': 'price'},
             'init_price': {'precision': 0, '_type': 'price'},
             'price_interval': {'precision': 0, '_type': 'price'},
@@ -239,11 +239,14 @@ class GridBot:
             avg_hold_price = self.param.init_price + flag * (extra_count * 1) * self.param.price_interval / 2
             extra_hold_amount = self.param.unit_amount * extra_count
             extra_hold_cost = avg_hold_price * extra_hold_amount
+
+            duration_day = duration_hour / 24
             data = {
-                'Actual Earning': [lowest_actual_earning, highest_actual_earning],
-                'Actual Earn Rate': [lowest_earn_rate, highest_earn_rate],
-                'Yearly Earn Rate': [lowest_yearly_earn_rate, highest_yearly_earn_rate],
-                'Extra Side': extra_side,
+                'Duration': "{} h ({} d)".format(format_float(duration_hour, 1), format_float(duration_day, 1)),
+                'Actual Earning': [format_float(lowest_actual_earning, 2), format_float(highest_actual_earning, 2)],
+                'Actual Earn Rate': [format_rate(lowest_earn_rate, 6), format_rate(highest_earn_rate, 6)],
+                'Yearly Earn Rate': [format_rate(lowest_yearly_earn_rate), format_rate(highest_yearly_earn_rate)],
+                'Extra Side': extra_side.value,
                 'Extra Hold Amount': extra_hold_amount,
                 'Extra Hold Cost': extra_hold_cost,
                 'Avg Hold Price': avg_hold_price,
