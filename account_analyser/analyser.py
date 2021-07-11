@@ -1,5 +1,6 @@
 import sys
 sys.path.append('.')
+import pprint
 import datetime
 import pandas as pd
 import python_bitbankcc
@@ -14,17 +15,19 @@ def check_avg(df, side):
     count = df.shape[0]
 
     df_side = df[df['side']==side]
+    count_side = df_side.shape[0]
     df_cost = df_side.price * df_side.amount
     total_cost = df_cost.sum()
     total_amount = df_side.amount.sum()
-    avg_cost = total_cost / total_amount
+    avg_price = total_cost / total_amount
     
     avg = {
         'total_cost': total_cost,
         'total_amount': total_amount,
-        'avg_cost': avg_cost,
+        'avg_price': avg_price,
         'start': start,
         'end': end,
+        'count_side': count_side,
         'count': count,
     }
     return avg
@@ -49,7 +52,7 @@ def convert_date(df, cols=['executed_at']):
 
 
 def analyze_earn_rate(df, latest_price):
-    df = df[df['cost'] > 5000]
+    df = df[df['cost'] < 5000]
     res = {}
     for side in ['buy', 'sell']:
         res[side] = check_avg(df, side)
@@ -89,7 +92,8 @@ def get_trade_history(exchange, symbols):
         res = analyze_earn_rate(df, latest_price)
 
         get_pine_script(df[df['cost']>2000], symbol=symbol)
-        print(symbol, res)
+        print(symbol)
+        pprint.pprint(res)
         # print(res)
         # print(df.head())
 
@@ -121,11 +125,13 @@ def analyze_trade_history():
     config = read_config()
     API_KEY = config['api']['key']
     API_SECRET = config['api']['secret']
-    symbols = ['btc_jpy', 'eth_jpy']
+    symbols = ['eth_jpy']
 
     exchange = python_bitbankcc.private(api_key=API_KEY, api_secret=API_SECRET)
     df_trades = get_trade_history(exchange=exchange, symbols=symbols)
-    df_trades.to_csv('data/trades.csv')
+    now = datetime.datetime.now()
+    filename = 'data/{}-trades.csv'.format(now.strftime("%Y-%m-%d-%H-%M-%S"))
+    df_trades.to_csv(filename)
 
 
 def analyze_candle_height():
