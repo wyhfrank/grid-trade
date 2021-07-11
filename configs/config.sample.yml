@@ -25,4 +25,4 @@ logging:
     backup_count: 10
 
 db:
-  firestore: /pat/to/serviceAccountKey.json
+  firestore: ./configs/serviceAccountKey.json
