@@ -112,7 +112,7 @@ def run_grid_bot(config_file):
 
 def setup_fsm(config):
     db_config = config.get('db')
-    firestore_config_file = db_config.get('db') if db_config else None
+    firestore_config_file = db_config.get('firestore') if db_config else None
     
     fsm = None
     if firestore_config_file:
