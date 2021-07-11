@@ -232,7 +232,7 @@ class GridBot:
             lowest_earn_rate = lowest_actual_earning / init_value
             highest_earn_rate = highest_actual_earning / init_value
             lowest_yearly_earn_rate = to_yearly(lowest_earn_rate, hour=duration_hour)
-            highest_yearly_earn_rate = to_yearly(highest_actual_earning, hour=duration_hour)
+            highest_yearly_earn_rate = to_yearly(highest_earn_rate, hour=duration_hour)
             
             flag = 1 if sell_count > buy_count else -1
             extra_side = "equal" if sell_count == buy_count else OrderSide.Sell if sell_count > buy_count else OrderSide.Buy
