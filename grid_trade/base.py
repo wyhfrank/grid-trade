@@ -42,8 +42,8 @@ class GridBot:
             'unused_quote': {'precision': 0, '_type': 'price'},
             'lowest_price': {'precision': 0, '_type': 'price'},
             'highest_price': {'precision': 0, '_type': 'price'},
-            'lowest_earn_rate_per_grid': {'precision': 2, '_type': 'rate'},
-            'highest_earn_rate_per_grid': {'precision': 2, '_type': 'rate'},
+            'lowest_earn_rate_per_grid': {'precision': 4, '_type': 'rate'},
+            'highest_earn_rate_per_grid': {'precision': 4, '_type': 'rate'},
         }
 
         def __init__(self, unit_amount, price_interval, init_base, init_quote, init_price,
