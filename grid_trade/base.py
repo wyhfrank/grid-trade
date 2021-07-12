@@ -15,7 +15,7 @@ from utils import format_float, format_rate, init_formatted_properties
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 
 class BotStatus(Enum):
