@@ -11,6 +11,7 @@ grid_bot:
   check_interval: 1 # Time between checking the update
   order_limit : 10
   reset_interval: 12  # reset the bot in 12 hours
+  report_interval: 2  # send notification of the execution report every N hours
 
 user:
   name: YOUR_NAME

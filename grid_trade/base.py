@@ -269,7 +269,8 @@ class GridBot:
         self.stopped_at = stopped_at
         self.latest_price = None
         self.traded_count = OrderCounter()
-        self.execution_report = GridBot.ExecutionReport(param)        
+        self.execution_report = GridBot.ExecutionReport(param)   
+        self._last_report_time = 0     
 
     #################
     # Core logic
@@ -280,6 +281,7 @@ class GridBot:
             return
 
         self.started_at = time.time()
+        self._last_report_time = self.started_at
         self.param = param
         self.execution_report = GridBot.ExecutionReport(param)
         self.additional_info = additional_info
@@ -312,11 +314,9 @@ class GridBot:
         self.stopped_at = time.time()
         self.status = BotStatus.Stopped
         self.update_bot_info_to_db()
-        duration_hour = (self.stopped_at - self.started_at) / (60 * 60)
-        report = self.execution_report.from_order_counter(self.traded_count, duration_hour=duration_hour)
         self.notify_info("-" * 80 + "\n" +\
-                        f"GridBot v{__version__} (`{self.uid}`) stopped with param:\n```\n{self.param.full_markdown}\n```" +\
-                        f"Execution Report:\n```{report}```")
+                        f"GridBot v{__version__} (`{self.uid}`) stopped with param:\n```\n{self.param.full_markdown}```")
+        self.notify_execution_report(force=True)
 
     def sync_and_adjust(self):
         """ Sync the orders status from exchange and adjust the stacks (refill new orders, balance stacks etc.) """
@@ -324,6 +324,8 @@ class GridBot:
         orders_data = self._retrieve_orders_data()
 
         counter = self._sync_order_status(orders_data=orders_data)
+        
+        self.notify_execution_report()
 
         if counter.total <= 0:
             # No orders traded
@@ -480,6 +482,24 @@ class GridBot:
             side = 'buy' if order.side==OrderSide.Buy else 'sell'
             message = self.format_order_traded(order=order, traded_count=self.traded_count)
             self.notifier.send_trade_msg(message + more, side)
+
+    def notify_execution_report(self, force=False):
+        now = time.time()
+        duration_from_last_report = now - self._last_report_time
+        if force or duration_from_last_report > self.report_interval_sec:
+            self._last_report_time = now
+            duration_hour = (now - self.started_at) / (60 * 60)
+            report = self.execution_report.from_order_counter(self.traded_count, duration_hour=duration_hour)
+            self.notify_info(f"Execution Report:\n```{report}```")
+
+    @property
+    def report_interval_sec(self):
+        default_interval = 99999999
+        try:
+            sec = self.additional_info.get('report_interval_sec', default_interval)
+            return sec
+        except Exception:
+            return default_interval
 
     @property
     def notifier(self):

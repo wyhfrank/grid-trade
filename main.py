@@ -45,7 +45,8 @@ def run_grid_bot(config_file):
     price_interval = bot_config['price_interval']
     check_interval = bot_config['check_interval']
     order_limit = bot_config['order_limit']
-    reset_interval_sec = bot_config['reset_interval'] * 60 * 60
+    reset_interval_sec = bot_config.get('reset_interval', 99999) * 60 * 60
+    report_interval_sec = bot_config.get('report_interval', 99999) * 60 * 60
 
     user = config['user']['name']
 
@@ -63,6 +64,7 @@ def run_grid_bot(config_file):
         'exchange': ex.name,
         'db': fsm,  # Comment this line out if you don't need to store data to db
         'notifier': discord,
+        'report_interval_sec': report_interval_sec,
     }
 
     try:
