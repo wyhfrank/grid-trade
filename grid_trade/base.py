@@ -4,7 +4,6 @@ sys.path.append('.')
 import time
 import logging
 import uuid
-from collections import defaultdict
 from typing import Iterable
 from enum import Enum
 from grid_trade.mixins import FieldFormatMixin
@@ -250,7 +249,7 @@ class GridBot:
                 'Yearly Earn Rate': [format_rate(lowest_yearly_earn_rate), format_rate(highest_yearly_earn_rate)],
                 'Extra Side': extra_side.value,
                 'Extra Hold Amount': extra_hold_amount,
-                'Extra Hold Cost': extra_hold_cost,
+                'Extra Hold Cost': format_float(extra_hold_cost, precision=1),
                 'Avg Hold Price': avg_hold_price,
             }
             return self._to_markdown(data)
@@ -315,7 +314,8 @@ class GridBot:
         self.update_bot_info_to_db()
         duration_hour = (self.stopped_at - self.started_at) / (60 * 60)
         report = self.execution_report.from_order_counter(self.traded_count, duration_hour=duration_hour)
-        self.notify_info(f"GridBot v{__version__} (`{self.uid}`) stopped with param:\n```\n{self.param.full_markdown}\n```" +\
+        self.notify_info("-" * 80 + "\n" +\
+                        f"GridBot v{__version__} (`{self.uid}`) stopped with param:\n```\n{self.param.full_markdown}\n```" +\
                         f"Execution Report:\n```{report}```")
 
     def sync_and_adjust(self):
