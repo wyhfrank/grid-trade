@@ -26,5 +26,7 @@ make run
 - [x] Format prices for orders and params (remove floating point)
 - [ ] Reset the bot only when price changed over a certain degree (instead of doing this by time interval)
 - [ ] Calculate earn rate
+  - [x] Estimation based on trade count
+  - [ ] Real calculation based on completed orders
 - [ ] Recover bot from db if stopped. (perhaps not needed)
 - [x] Discord notification
