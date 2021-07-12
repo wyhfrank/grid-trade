@@ -235,7 +235,7 @@ class GridBot:
             highest_yearly_earn_rate = to_yearly(highest_earn_rate, hour=duration_hour)
             
             flag = 1 if sell_count > buy_count else -1
-            extra_side = "equal" if sell_count == buy_count else OrderSide.Sell if sell_count > buy_count else OrderSide.Buy
+            extra_side = "equal" if sell_count == buy_count else OrderSide.Sell.value if sell_count > buy_count else OrderSide.Buy.value
             avg_hold_price = self.param.init_price + flag * (extra_count * 1) * self.param.price_interval / 2
             extra_hold_amount = self.param.unit_amount * extra_count
             extra_hold_cost = avg_hold_price * extra_hold_amount
@@ -247,7 +247,7 @@ class GridBot:
                 'Actual Earning': [format_float(lowest_actual_earning, 2), format_float(highest_actual_earning, 2)],
                 'Actual Earn Rate': [format_rate(lowest_earn_rate, 4), format_rate(highest_earn_rate, 4)],
                 'Yearly Earn Rate': [format_rate(lowest_yearly_earn_rate), format_rate(highest_yearly_earn_rate)],
-                'Extra Side': extra_side.value,
+                'Extra Side': extra_side,
                 'Extra Hold Amount': extra_hold_amount,
                 'Extra Hold Cost': format_float(extra_hold_cost, precision=1),
                 'Avg Hold Price': avg_hold_price,
