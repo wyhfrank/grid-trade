@@ -352,7 +352,7 @@ class GridBot:
         try:
             orders_data = self.exchange.get_orders_data(order_ids=order_ids)
         except self.exchange.KnownExceptions as e:
-            logger.error(f"Known error during retrievning orders: {e}")
+            logger.error(f"Known error during retrieving orders: {e}")
         except Exception as e:
             self.notify_error(f"Error during retrieving orders from {self.exchange.name}: {e}")
         return orders_data

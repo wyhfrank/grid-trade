@@ -12,6 +12,10 @@ class InvalidPriceError(Exception):
     pass
 
 
+class ApiAuthFailedError(Exception):
+    pass
+
+
 class Exchange:
     name = 'AbstractExchange'
     fee = 0
@@ -128,7 +132,8 @@ class Bitbank(Exchange):
     fee = -0.002
     # Known exceptions that does not impact too much on the process
     KnownExceptions = (requests.exceptions.SSLError, 
-                    # requests.exceptions.ConnectionError
+                    # requests.exceptions.ConnectionError,
+                    ApiAuthFailedError,
                     ) 
 
     class OrderStatus(Enum):
@@ -267,7 +272,19 @@ class Bitbank(Exchange):
     def get_orders_data(self, order_ids):
         if not order_ids:
             return []
-        res = self.prv.get_orders_info(self.pair, order_ids=order_ids)
+
+        try:
+            res = self.prv.get_orders_info(self.pair, order_ids=order_ids)
+        except Exception as e:
+            message = e.args[0] if e.args and len(e.args) > 0 else ''
+             # argument of type 'MaxRetryError' is not iterable
+            if isinstance(message, str):
+                if '20001' in message: # エラーコード: 20001 内容: API認証に失敗しました
+                    # This seems to occur oftenly when the same API Key is used in other places at the same time
+                    raise ApiAuthFailedError(message)
+
+            raise e
+            
         # print("Response of check_order_status:", res)
         orders_data = res['orders']
         return orders_data
