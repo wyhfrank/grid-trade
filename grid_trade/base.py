@@ -248,7 +248,7 @@ class GridBot:
                 'Actual Earn Rate': [format_rate(lowest_earn_rate, 4), format_rate(highest_earn_rate, 4)],
                 'Yearly Earn Rate': [format_rate(lowest_yearly_earn_rate), format_rate(highest_yearly_earn_rate)],
                 'Extra Side': extra_side,
-                'Extra Hold Amount': extra_hold_amount,
+                'Extra Hold Amount': format_float(extra_hold_amount, precision=4),
                 'Extra Hold Cost': format_float(extra_hold_cost, precision=1),
                 'Avg Hold Price': avg_hold_price,
             }
