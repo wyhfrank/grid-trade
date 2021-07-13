@@ -5,6 +5,7 @@ import datetime
 import pandas as pd
 import python_bitbankcc
 from utils import create_pine_script, read_config
+from exchanges import Bitbank
 
 
 MAX_ORDER_HISTORY_COUNT = 99999999
@@ -74,20 +75,14 @@ def get_pine_script(df, symbol):
         f.write(code)
 
 
-def get_trade_history(exchange, symbols):
+def get_trade_history(exchange, symbols, since=None):
     dfs = pd.DataFrame()
     for symbol in symbols:
         pub = python_bitbankcc.public()
         resp = pub.get_ticker(pair=symbol)
         latest_price = float(resp['last'])
 
-        resp = exchange.get_trade_history(pair=symbol, order_count=MAX_ORDER_HISTORY_COUNT)
-        data = resp['trades']
-        
-        df = pd.DataFrame(data)
-        convert_float(df)
-        df['cost'] = df['amount'] * df['price']
-        convert_date(df)
+        df = exchange.get_trade_history(pair=symbol, since=since)
 
         res = analyze_earn_rate(df, latest_price)
 
@@ -123,12 +118,18 @@ def get_candlesticks(exchange, symbols, window='1min', date=datetime.datetime.no
 
 def analyze_trade_history():
     config = read_config()
-    API_KEY = config['api']['key']
-    API_SECRET = config['api']['secret']
     symbols = ['eth_jpy']
 
-    exchange = python_bitbankcc.private(api_key=API_KEY, api_secret=API_SECRET)
-    df_trades = get_trade_history(exchange=exchange, symbols=symbols)
+    api_key = config['api']['key']
+    api_secret = config['api']['secret']
+
+    # This is the date  I (Micy) started grid trade
+    since = datetime.datetime(2021, 7, 5).timestamp()
+    # since = 1625496416000
+
+    bb = Bitbank(pair=None, api_key=api_key, api_secret=api_secret)   
+    # exchange = python_bitbankcc.private(api_key=api_key, api_secret=api_secret)
+    df_trades = get_trade_history(exchange=bb, symbols=symbols, since=since)
     now = datetime.datetime.now()
     filename = 'data/{}-trades.csv'.format(now.strftime("%Y-%m-%d-%H-%M-%S"))
     df_trades.to_csv(filename)

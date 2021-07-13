@@ -65,7 +65,10 @@ class Exchange:
 
 
 class BitbankPrivateExt(python_bitbankcc.private):
-    trade_history_count_limit = 1000
+    # https://github.com/bitbankinc/bitbank-api-docs/blob/master/rest-api.md#trade
+    # Official doc says the default limit is 1000, but the test shows it's 500
+    #  Maybe we should not trust this value
+    trade_history_count_limit = 500
     
     # This endpoint is not support by the official python api
     # It is strange that this is a private api tho
@@ -99,7 +102,7 @@ class BitbankPrivateExt(python_bitbankcc.private):
             'pair': pair,
         }
 
-        supported_args = ['count', 'since', 'end', 'order']
+        supported_args = ['order_count', 'since', 'end', 'order']
         for k, v in kwargs.items():
             if k in supported_args and v:
                 query[k] = v
@@ -304,7 +307,15 @@ class Bitbank(Exchange):
         except KeyError:
             return False
     
-    def get_trade_history(self, pair=None, count=None, since=None, end=None, ascending=True):
+    def get_trade_history(self, pair=None, order_count=None, since=None, end=None, ascending=True):
+        def ensure_in_miliseconds(timestamp):
+            if timestamp:
+                if timestamp < 946688400000:
+                    # 946688400000 ==  January 1, 2000 1:00:00 AM
+                    return timestamp * 1000
+                pass
+            return None
+
         def convert_float(df, cols=['amount', 'price', 'fee_amount_base', 'fee_amount_quote']):
             for col in cols:
                 if col in df.columns:
@@ -323,26 +334,56 @@ class Bitbank(Exchange):
         
         order = 'asc' if ascending else 'desc'
         df = pd.DataFrame()
-        
-        batch_start = start
+
+        since = ensure_in_miliseconds(since)
+        end = ensure_in_miliseconds(end)
+        batch_start = since
         batch_end = end
+
         while True:
-            res = self.prv.get_trade_history(pair=pair, count=count, since=batch_start, end=batch_end, order=order)
-            n_records = len(res)
-            if not n_records:
+            res = self.prv.get_trade_history(pair=pair, order_count=order_count, since=batch_start, end=batch_end, order=order)
+            trades_data = res['trades']
+            n_records_batch = len(trades_data)
+            if n_records_batch <= 0:
+                # No records left
                 break
-            df_batch = pd.DataFrame(res['trades'])
+            df_batch = pd.DataFrame(trades_data)
             convert_float(df_batch)
             convert_date(df_batch)
             df_batch['cost'] = df_batch['amount'] * df_batch['price']
-            df = df.merge(df_batch)
+            # https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#concatenating-using-append
+            df = df.append(df_batch)
+            df.drop_duplicates(subset=['trade_id'], inplace=True)
 
-            batch_start = df_batch['executed_at'].min()
-            if since and batch_start <= since:
+            n_records_total = df.shape[0]
+
+            # max_possible_records = count if count is not None else self.prv.trade_history_count_limit
+            # In this batch we got less records than the max what we could get, i.e. all data retrieved
+            # if n_records_batch < max_possible_records:
+                # break
+
+            if order_count is not None and n_records_total >= order_count:
+                # We got enough records needed
                 break
-            batch_end = batch_start
 
-        df = df.drop_duplicates(subset=['trade_id'], inplace=True).sort_values(by='executed_at', ascending=ascending)
-        return res
+            if ascending:
+                # Going forwards in time
+                max_execute = df_batch['executed_at'].max()
+                if end and max_execute >= end:
+                    # The `end` condition is met
+                    break
+                batch_start = max_execute + 1
+            else:
+                # Going backwards in time
+                min_execute = df_batch['executed_at'].min()
+                if since and min_execute <= since:
+                    # The `since` condition is met
+                    break
+                batch_end = min_execute - 1
+
+        df = df.sort_values(by='executed_at', ascending=ascending)
+        if order_count is not None and order_count < n_records_total:
+            df = df.head(order_count)
+        return df
         
 
