@@ -409,7 +409,7 @@ class GridBot:
         # Balance the stacks if necessary
         self.om.balance_stacks()
 
-        self._commit_oders_traded()
+        self._commit_orders_traded()
         self._commit_cancel_orders()
         self._commit_create_orders()
         self.update_bot_info_to_db(fields=['traded_count', 'latest_price'])
@@ -547,7 +547,7 @@ class GridBot:
                 self.om.order_force_cancelled(order=o)
                 self.notify_error(f"Create order failed in {self.exchange} for order: {o}")
 
-    def _commit_oders_traded(self):
+    def _commit_orders_traded(self):
         self.om.orders_traded()
 
     #################
