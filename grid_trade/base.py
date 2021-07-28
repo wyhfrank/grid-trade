@@ -271,6 +271,7 @@ class GridBot:
         self.traded_count = OrderCounter()
         self.execution_report = GridBot.ExecutionReport(param)   
         self._last_report_time = 0     
+        self._order_too_less_reported = False
 
     #################
     # Core logic
@@ -345,6 +346,7 @@ class GridBot:
                     f"Current price [{new_price}]"
                     )
         self.om.print_stacks()
+        self._check_orders_too_less()
 
     def _retrieve_orders_data(self):
         orders_data = []
@@ -444,6 +446,15 @@ class GridBot:
             return f"Opponent [{other_side.value}] order +[{other_side_price}] cannot be created.\n" +\
                 f"```\n{msg}```"
         return False
+    
+    def _check_orders_too_less(self):
+        """ Check whether too many orders disappeared """
+        if self._order_too_less_reported:
+            return
+        
+        if len(self.om.active_orders) < self.exchange.max_order_count / 2:
+            self.notify_error(f"Half of the orders disappeared. Better check what happened and restart the bot.")
+            self._order_too_less_reported = True
 
     #################
     # DB related
