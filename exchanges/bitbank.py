@@ -1,8 +1,11 @@
 from enum import Enum
+import logging
 import requests
 import pandas as pd
 import python_bitbankcc
 
+
+logger = logging.getLogger(__name__)
 
 class ExceedOrderLimitError(Exception):
     pass
@@ -235,6 +238,7 @@ class Bitbank(Exchange):
         order_type_value = order.order_type.value
 
         try:
+            logger.debug(f"Requesting to create order: {side_value} {order.amount} {order.pair} @{order.price}")
             order_data = self.prv.order(pair=order.pair, price=order.price, amount=order.amount, 
                                 side=side_value, order_type=order_type_value, post_only=order.post_only)
         except Exception as e:
@@ -261,6 +265,7 @@ class Bitbank(Exchange):
     def cancel_orders(self, order_ids):
         if not order_ids:
             return []
+        logger.debug(f"Requesting to cancel orders: {order_ids}")
         res = self.prv.cancel_orders(self.pair, order_ids=order_ids)
         # print("Response of cancel order:", res)
         orders_data = res['orders']
