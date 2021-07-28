@@ -15,6 +15,7 @@ make run
 ## TODO
 
 - [ ] Bug: duplicate orders exist
+- [ ] Bug: orders are cancelled from the server side with unknow reason
 - [x] Irregular price notification is overwhelming
 - [x] Bug in notifying the counter: total counter is not updated instantly
 - [x] Log the full lifecycle of an order (creation -> traded / cancelled -> removed)
