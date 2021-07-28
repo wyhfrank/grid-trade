@@ -67,6 +67,13 @@ class Order(FieldFormatMixin):
         self.user = user
         self.exchange = exchange
         self.db = db
+    
+    @property
+    def cost(self):
+        cost = self.amount * self.price
+        # Hard coding the precision of `cost` to be the same as `price`
+        cost = round(cost, self.fields_to_format['price']['precision'])
+        return cost
         
     def mark_cancel(self):
         if self.status == OrderStatus.Created:
@@ -172,11 +179,11 @@ class Order(FieldFormatMixin):
     
     @property
     def short_markdown(self) -> str:
-        return f"{self.user} {self.side.value} {self.amount_s} {self.pair} @ **{self.price_s}**"
+        return f"{self.user} {self.side.value} {self.amount_s} {self.pair} @ **{self.price_s}** with {self.cost}"
 
     @property
     def short(self) -> str:
-        return f"[{self.side.value}] {self.amount_s} @ {self.price_s}"
+        return f"[{self.side.value}] {self.amount_s} @ {self.price_s} with {self.cost}"
 
 
 class OrderManager:

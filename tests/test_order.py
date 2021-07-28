@@ -28,6 +28,9 @@ class TestOrder:
 
         assert o.price_s == '1'
         assert o.amount_s == '1.2346'
+        assert o.cost == 2
+        assert "2.0" in o.short
+
 
         Order.set_precision(price_precision=price_precision, amount_precision=amount_precision)
         init_formatted_properties(Order)
