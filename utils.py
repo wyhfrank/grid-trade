@@ -140,6 +140,10 @@ def config_logging(logging_config):
     setup_logging(log_file_path=file_path, backup_count=backup_count)
 
 
+def set_lvl_for_imported_lib(libs=['urllib3', 'python_bitbankcc'], level=logging.INFO):
+    for lib in libs:
+        logging.getLogger(lib).setLevel(level=level)
+
 
 #################
 # Tests

@@ -13,7 +13,7 @@ import requests
 import logging
 from grid_trade import GridBot, set_precision
 from exchanges import Bitbank
-from utils import read_config, config_logging
+from utils import read_config, config_logging, set_lvl_for_imported_lib
 from db.manager import FireStoreManager
 from notification import Discord
 
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    set_lvl_for_imported_lib()
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     else:
@@ -100,6 +101,7 @@ def run_grid_bot(config_file):
                 elapsed = time.time() - now
                 to_sleep = check_interval - elapsed
                 if to_sleep > 0:
+                    
                     # logger.debug(f"Sleep for: {to_sleep:.3f}s")
                     time.sleep(to_sleep)
     except KeyboardInterrupt:
