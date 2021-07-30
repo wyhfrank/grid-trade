@@ -370,6 +370,9 @@ class GridBot:
                 #  since the order will be removed from the stack by then
                 order = self.om.get_order_by_id(order_id=oid)
 
+                # Update the average_price of the order
+                order.average_price = order_data['average_price']
+
                 # Mark the order that is traded in this sync
                 self.om.mark_order_on_traded(order_id=oid)
 
