@@ -271,7 +271,7 @@ class GridBot:
         self.traded_count = OrderCounter()
         self.execution_report = GridBot.ExecutionReport(param)   
         self._last_report_time = 0     
-        self._order_too_less_reported = False
+        self._last_check_order_count = -1
 
     #################
     # Core logic
@@ -346,7 +346,7 @@ class GridBot:
                     f"Current price [{new_price}]"
                     )
         self.om.print_stacks()
-        self._check_orders_too_less()
+        self._check_orders_decreased()
 
     def _retrieve_orders_data(self):
         orders_data = []
@@ -386,11 +386,11 @@ class GridBot:
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 oid = order_data['order_id']
                 # Force cancel the order
-                self.om.order_force_cancelled(order_id=oid)
                 msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
                 # logger.warning(msg)
                 # This will be spamming. Update: the order will be cancelled and removed, thus no spamming
                 self.notify_error(msg)
+                self.om.order_force_cancelled(order_id=oid)
         return counter
 
     def  _adjust_orders(self, price_info):
@@ -447,14 +447,19 @@ class GridBot:
                 f"```\n{msg}```"
         return False
     
-    def _check_orders_too_less(self):
-        """ Check whether too many orders disappeared """
-        if self._order_too_less_reported:
-            return
+    def _check_orders_decreased(self):
+        """ Check whether the orders are decreasing """
         
-        if len(self.om.active_orders) < self.exchange.max_order_count / 2:
-            self.notify_error(f"Half of the orders disappeared. Better check what happened and restart the bot.")
-            self._order_too_less_reported = True
+        current_count = len(self.om.active_orders)
+
+        if self._last_check_order_count < 0:
+            # First time of check, record the current count only
+            self._last_check_order_count = current_count
+            return
+
+        if current_count < self._last_check_order_count:
+            self.notify_error(f"The number of orders decreased to {current_count}. Current stack: {self.om.stack_brief_info}")
+            self._last_check_order_count = current_count
 
     #################
     # DB related

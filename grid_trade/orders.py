@@ -545,6 +545,8 @@ class OrderManager:
     def db(self):
         return self.get_additional('db')
     
+    ##########################
+    # Debug print
     def print_stacks(self):
         self.print_stacks_size()
         msg = ["\n"]
@@ -554,6 +556,10 @@ class OrderManager:
     
     def print_stacks_size(self):
         logger.info(f"Stack size [buy: {len(self.buy_stack.all_orders)}, sell: {len(self.sell_stack.all_orders)}]")
+
+    @property
+    def stack_brief_info(self):
+        return f"[+{len(self.buy_stack.all_orders)}, -{len(self.sell_stack.all_orders)}]"
     
     def cancel_all(self):
         for stack in [self.buy_stack, self.sell_stack]:
