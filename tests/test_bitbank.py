@@ -4,12 +4,15 @@ import sys
 sys.path.append('.')
 
 import pytest
+import time
 import logging
+from requests.exceptions import HTTPError
 from exchanges import Bitbank
-from utils import read_config
+from utils import read_config, set_lvl_for_imported_lib
 
 logger = logging.getLogger(__name__)
 
+set_lvl_for_imported_lib()
 
 class TestBitbank:
 
@@ -19,6 +22,20 @@ class TestBitbank:
         api_secret = config['api']['secret']
         pair = 'btc_jpy'
         self.bb = Bitbank(pair=pair, api_key=api_key, api_secret=api_secret)        
+
+    def test_exceed_quota(self):
+        start = time.time()
+        try:
+            for i in range(100):
+                # info = self.bb.get_latest_prices()
+                info = self.bb.get_assets()
+        except HTTPError as e:
+            logger.error(e)
+        finally:
+            end = time.time()
+            elapsed = end - start
+            logger.info(f"Elapsed: {elapsed:.3f} s")
+        logger.info(info)
 
     @pytest.mark.skip
     def test_get_prices(self):
@@ -156,6 +173,6 @@ if __name__ == '__main__':
     import os
     from utils import setup_logging
     log_file_path = os.path.basename(__file__) + '.log'
-    setup_logging(log_file_path='./logs/testing/' + log_file_path, backup_count=1, file_level=logging.INFO)
+    setup_logging(log_file_path='./logs/testing/' + log_file_path, backup_count=1) # , file_level=logging.INFO
     # https://stackoverflow.com/a/41616391/1938012
     retcode = pytest.main(['-x', __file__])
