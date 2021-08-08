@@ -50,7 +50,7 @@ class Order(FieldFormatMixin):
 
     def __init__(self, price, amount, pair, order_type=OrderType.Limit, order_id=None, couple_id=None, 
                 side=OrderSide.Buy, average_price=0, status=OrderStatus.ToCreate, 
-                executed_at=None, ordered_at=None, post_only=True, user='', exchange='',
+                executed_at=None, ordered_at=None, post_only=False, user='', exchange='',
                 db=None):
         self.order_id = order_id
         self.price = price
