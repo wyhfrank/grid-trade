@@ -397,7 +397,7 @@ class GridBot:
                         msg = f"Order possibly failed during creation: "
                     else:
                         msg = f"Order possibly cancelled by the user: "
-                    msg +=  f"{order.short_markdown}. Elapsed: {elapsed} s."
+                    msg +=  f"{order.short}. Elapsed: {elapsed} s."
                     self.notify_error(msg)
                     
                     # Force cancel the order
