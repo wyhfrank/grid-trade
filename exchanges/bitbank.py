@@ -3,6 +3,7 @@ import logging
 import requests
 import pandas as pd
 import python_bitbankcc
+from utils import ensure_in_miliseconds
 
 
 logger = logging.getLogger(__name__)
@@ -313,13 +314,6 @@ class Bitbank(Exchange):
             return False
     
     def get_trade_history(self, pair=None, order_count=None, since=None, end=None, ascending=True):
-        def ensure_in_miliseconds(timestamp):
-            if timestamp:
-                if timestamp < 946688400000:
-                    # 946688400000 ==  January 1, 2000 1:00:00 AM
-                    return timestamp * 1000
-                pass
-            return None
 
         def convert_float(df, cols=['amount', 'price', 'fee_amount_base', 'fee_amount_quote']):
             for col in cols:

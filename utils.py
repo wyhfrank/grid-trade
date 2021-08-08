@@ -6,6 +6,15 @@ import asyncio
 import yaml
 
 
+def ensure_in_miliseconds(timestamp):
+    if timestamp:
+        if timestamp < 946688400000:
+            # 946688400000 ==  January 1, 2000 1:00:00 AM
+            return timestamp * 1000
+        pass
+    return None
+
+
 async def make_async(func, *args):
     loop = asyncio.get_event_loop()
     res = await loop.run_in_executor(None, func, *args)

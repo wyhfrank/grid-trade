@@ -565,7 +565,7 @@ class OrderManager:
         for stack in [self.buy_stack, self.sell_stack]:
             stack.cancel_all()
     
-    def get_order_by_id(self, order_id):
+    def get_order_by_id(self, order_id) -> Order:
         """ Find the order and the corresponding stack if exists """
         order, _ = self.get_order_and_stack_by_order_id(order_id=order_id)
         return order

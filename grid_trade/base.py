@@ -10,7 +10,7 @@ from grid_trade.mixins import FieldFormatMixin
 from grid_trade.orders import Order, OrderManager, OrderSide, OrderCounter
 from exchanges import Exchange
 from exchanges.bitbank import ExceedOrderLimitError, InvalidPriceError
-from utils import format_float, format_rate, init_formatted_properties
+from utils import format_float, format_rate, init_formatted_properties, ensure_in_miliseconds
 
 
 logger = logging.getLogger(__name__)
@@ -388,12 +388,21 @@ class GridBot:
                     self.notify_error(f"Traded order not found during sync. Order id: `{oid}`")
             elif self.exchange.is_order_cancelled(order_data=order_data):
                 oid = order_data['order_id']
-                # Force cancel the order
-                msg = f"Order possibly failed during creation or cancelled by the user: {oid}"
-                # logger.warning(msg)
-                # This will be spamming. Update: the order will be cancelled and removed, thus no spamming
-                self.notify_error(msg)
-                self.om.order_force_cancelled(order_id=oid)
+                order = self.om.get_order_by_id(order_id=oid)
+                if order:
+                    ts = time.time()
+                    now = ensure_in_miliseconds(ts)
+                    elapsed = (now - order.ordered_at) / 1000
+                    if elapsed < 5:
+                        msg = f"Order possibly failed during creation: "
+                    else:
+                        msg = f"Order possibly cancelled by the user: "
+                    msg +=  f"{order.short_markdown}. Elapsed: {elapsed} s."
+                    self.notify_error(msg)
+                    
+                    # Force cancel the order
+                    self.om.order_force_cancelled(order_id=oid)
+
         return counter
 
     def  _adjust_orders(self, price_info):
