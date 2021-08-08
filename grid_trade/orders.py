@@ -183,7 +183,7 @@ class Order(FieldFormatMixin):
 
     @property
     def short(self) -> str:
-        return f"[{self.side.value}] {self.amount_s} @ {self.price_s} with {self.cost}. ({self.id})"
+        return f"[{self.side.value}] {self.amount_s} @ {self.price_s} with {self.cost}. ({self.order_id})"
 
 
 class OrderManager:
