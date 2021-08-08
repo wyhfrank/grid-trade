@@ -393,7 +393,7 @@ class GridBot:
                     ts = time.time()
                     now = ensure_in_miliseconds(ts)
                     elapsed = (now - order.ordered_at) / 1000
-                    if elapsed < 5:
+                    if elapsed < 2:
                         msg = f"Order possibly failed during creation: "
                     else:
                         msg = f"Order possibly cancelled by the user: "
